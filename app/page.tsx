@@ -1,14 +1,14 @@
-// front/app/page.tsx
-"use client" // This component remains a client component.
+import { redirect } from "next/navigation"
+import { cookies } from "next/headers"
+import Dashboard from "@/components/dashboard"
 
-import dynamic from 'next/dynamic'; // Import Next.js's dynamic utility
+export default async function HomePage() {
+  const cookieStore = await cookies()
+  const token = cookieStore.get("token")
 
-// Dynamically import the App component.
-// { ssr: false } tells Next.js NOT to render this component on the server.
-const DynamicApp = dynamic(() => import("../src/App"), { ssr: false });
+  if (!token) {
+    redirect("/login")
+  }
 
-export default function SyntheticV0PageForDeployment() {
-  // Render the dynamically imported App component.
-  // It will only be rendered once the client-side environment is available.
-  return <DynamicApp />;
+  return <Dashboard />
 }

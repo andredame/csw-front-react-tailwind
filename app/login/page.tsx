@@ -1,14 +1,18 @@
-// front/app/login/page.tsx
-"use client"; // This page must be a Client Component
+import { redirect } from "next/navigation"
+import { cookies } from "next/headers"
+import LoginForm from "@/components/login-form"
 
-// Import both Login component and AuthProvider
-import Login from "../../src/pages/Login";
-import { AuthProvider } from "../../src/contexts/AuthContext"; // Import AuthProvider
+export default async function LoginPage() {
+  const cookieStore = await cookies()
+  const token = cookieStore.get("token")
 
-export default function LoginPage() {
+  if (token) {
+    redirect("/")
+  }
+
   return (
-    <AuthProvider> {/* Wrap the Login component with AuthProvider */}
-      <Login />
-    </AuthProvider>
-  );
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-red-50">
+      <LoginForm />
+    </div>
+  )
 }
