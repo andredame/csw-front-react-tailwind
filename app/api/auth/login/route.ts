@@ -1,84 +1,74 @@
-import { type NextRequest, NextResponse } from "next/server"
-import { SignJWT } from "jose"
-import { cookies } from "next/headers"
-
-const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET || "your-secret-key")
-
-// Mock user data - replace with your actual authentication logic
-const mockUsers = [
-  {
-    id: "1",
-    username: "edgardossantos@edu.pucrs.br",
-    password: "123456",
-    email: "edgardossantos@edu.pucrs.br",
-    roles: ["ADMIN"],
-  },
-  {
-    id: "2",
-    username: "mariaeduarda@edu.pucrs.br",
-    password: "123456",
-    email: "mariaeduarda@edu.pucrs.br",
-    roles: ["COORDENADOR"],
-  },
-  {
-    id: "3",
-    username: "john@edu.pucrs.br",
-    password: "123456",
-    email: "john@edu.pucrs.br",
-    roles: ["PROFESSOR"],
-  },
-  {
-    id: "4",
-    username: "andresilva@edu.pucrs.br",
-    password: "123456",
-    email: "andresilva@edu.pucrs.br",
-    roles: ["ALUNO"],
-  },
-]
+import { type NextRequest, NextResponse } from "next/server";
+import { cookies } from "next/headers";
 
 export async function POST(request: NextRequest) {
   try {
-    const { username, password } = await request.json()
+    const { username, password } = await request.json();
 
-    // Find user - replace with your actual authentication logic
-    const user = mockUsers.find((u) => u.username === username && u.password === password)
+    // URL da sua API Spring Boot de login - MANTIDA FIXA CONFORME SUA PREFERÊNCIA
+    const SPRING_BOOT_AUTH_LOGIN_URL = "http://localhost:8081/api/auth/login"; //
 
-    if (!user) {
-      return NextResponse.json({ message: "Credenciais inválidas" }, { status: 401 })
+    if (!SPRING_BOOT_AUTH_LOGIN_URL) {
+      return NextResponse.json({ message: "URL de login da API Spring Boot não configurada." }, { status: 500 });
     }
 
-    // Create JWT token
-    const token = await new SignJWT({
-      sub: user.id,
-      preferred_username: user.username,
-      email: user.email,
-      realm_access: { roles: user.roles },
-    })
-      .setProtectedHeader({ alg: "HS256" })
-      .setIssuedAt()
-      .setExpirationTime("24h")
-      .sign(JWT_SECRET)
+    // Chama o endpoint de login da sua API Spring Boot
+    const authResponse = await fetch(SPRING_BOOT_AUTH_LOGIN_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ username, password }),
+    });
 
-    // Set httpOnly cookie
-    const cookieStore = cookies()
-    cookieStore.set("token", token, {
+    if (!authResponse.ok) {
+      const errorData = await authResponse.json();
+      return NextResponse.json({ message: errorData.message || "Credenciais inválidas ou erro no servidor de autenticação." }, { status: authResponse.status });
+    }
+
+    const { access_token, refresh_token, expires_in, id_token, user_info } = await authResponse.json();
+
+    const user = {
+      id: user_info?.id || 'id-não-disponível',
+      username: user_info?.username || username, 
+      email: user_info?.email || username, 
+      roles: user_info?.roles || [], 
+    };
+
+    const cookieStore = await cookies(); 
+
+    cookieStore.set("token", access_token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
-      maxAge: 60 * 60 * 24, // 24 hours
+      maxAge: expires_in, 
       path: "/",
-    })
+    });
 
-    return NextResponse.json({
-      user: {
-        id: user.id,
-        username: user.username,
-        email: user.email,
-        roles: user.roles,
-      },
-    })
+    if (refresh_token) {
+        cookieStore.set("refreshToken", refresh_token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: "lax",
+            maxAge: expires_in * 2, 
+            path: "/",
+        });
+    }
+
+    if (id_token) { 
+        cookieStore.set("id_token", id_token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: "lax",
+            maxAge: expires_in,
+            path: "/",
+        });
+    }
+
+    return NextResponse.json({ user });
+    
   } catch (error) {
-    console.error("Login error:", error)
-    return NextResponse.json({ message: "Erro interno do servidor" }, { status: 500 })
+    console.error("Erro no processo de login/autenticação:", error);
+    return NextResponse.json({ message: "Erro interno do servidor ao tentar login." }, { status: 500 });
   }
 }

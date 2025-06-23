@@ -2,11 +2,11 @@
 
 import { createContext, useContext, useState, useEffect, type ReactNode } from "react"
 import { useRouter } from "next/navigation"
-import type { User } from "@/lib/auth-utils"
+import type { User } from "@/lib/auth-utils" 
 
 interface AuthContextType {
   user: User | null
-  login: (username: string, password: string) => Promise<{ success: boolean; error?: string }>
+  login: (username: string, password: string) => Promise<{ success: boolean; error?: string }> 
   logout: () => Promise<void>
   isAuthenticated: boolean
   loading: boolean
@@ -40,14 +40,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const checkAuthStatus = async () => {
     try {
       const response = await fetch("/api/auth/me", {
-        credentials: "include",
+        credentials: "include", 
       })
 
       if (response.ok) {
         const userData = await response.json()
         setUser(userData.user)
       } else {
-        setUser(null)
+        // Se a verificação de status falhar, garante que o usuário seja null
+        setUser(null) 
       }
     } catch (error) {
       console.error("Auth check failed:", error)
@@ -64,13 +65,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
         headers: {
           "Content-Type": "application/json",
         },
-        credentials: "include",
+        credentials: "include", 
         body: JSON.stringify({ username, password }),
       })
 
       if (response.ok) {
         const data = await response.json()
-        setUser(data.user)
+        setUser(data.user) // Define o usuário imediatamente
+
+        // Força uma nova verificação de status APÓS a definição do usuário e dos cookies
+        // Isso garante consistência e valida o cookie recém-definido.
+        await checkAuthStatus(); 
+
         return { success: true }
       } else {
         const errorData = await response.json()
@@ -89,15 +95,19 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const logout = async () => {
     try {
+      // Chama a rota de logout do Next.js, que por sua vez cuida do Keycloak
       await fetch("/api/auth/logout", {
         method: "POST",
         credentials: "include",
-      })
+      });
+      // A rota de logout do Next.js fará o redirecionamento para o Keycloak
+      // para encerrar a sessão lá. O navegador será redirecionado automaticamente.
     } catch (error) {
-      console.error("Logout error:", error)
+      console.error("Logout error:", error);
     } finally {
-      setUser(null)
-      router.push("/login")
+      setUser(null); // Limpa o estado local do usuário imediatamente
+      // Um redirecionamento direto aqui pode ser útil caso o redirecionamento do Keycloak falhe
+      router.push("/login"); 
     }
   }
 

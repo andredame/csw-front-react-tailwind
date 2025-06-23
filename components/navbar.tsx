@@ -6,7 +6,8 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useAuth } from "@/providers/auth-provider"
 import { Button } from "@/components/ui/button"
-import { Building, Users, Calendar, BookOpen, Settings } from "lucide-react"
+import { Building, Users, Calendar, BookOpen, Settings, LogOut } from "lucide-react"
+import Image from "next/image"
 
 export default function Navbar() {
   const { user, logout, isAuthenticated, hasRole, hasAnyRole } = useAuth()
@@ -23,15 +24,27 @@ export default function Navbar() {
   const isActive = (path: string) => pathname === path
 
   return (
-    <nav className="bg-white shadow-lg border-b border-gray-200">
-      <div className="container mx-auto px-4">
+    <nav className="bg-white shadow-lg border-b border-gray-200 wave-container relative">
+      {/* Subtle wave decoration */}
+      <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-blue-600 via-red-600 to-yellow-600 opacity-60"></div>
+
+      <div className="container mx-auto px-4 relative z-10">
         <div className="flex items-center justify-between py-4">
-          {/* Brand */}
+          {/* Brand with Coat of Arms */}
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-red-600 rounded-full flex items-center justify-center">
-              <span className="text-white font-bold text-lg">S</span>
+            <div className="heraldic-emblem">
+              <Image
+                src="/images/coat-of-arms.png"
+                alt="SARC Coat of Arms"
+                width={40}
+                height={40}
+                className="coat-of-arms"
+              />
             </div>
-            <Link href="/" className="text-2xl font-bold text-gray-800 hover:text-blue-600 transition-colors">
+            <Link
+              href="/"
+              className="text-2xl font-bold bg-gradient-to-r from-blue-600 via-red-600 to-yellow-600 bg-clip-text text-transparent hover:opacity-80 transition-opacity"
+            >
               SARC
             </Link>
           </div>
@@ -74,10 +87,17 @@ export default function Navbar() {
 
           {/* User Section */}
           <div className="flex items-center space-x-4">
-            <span className="text-sm text-gray-600 hidden sm:block">
-              Olá, <span className="font-semibold text-blue-600">{user?.username}</span>
-            </span>
-            <Button onClick={handleLogout} variant="outline" size="sm">
+            <div className="hidden sm:block text-right">
+              <p className="text-sm font-medium text-gray-700">{user?.username}</p>
+              <p className="text-xs text-gray-500">{user?.roles?.join(", ")}</p>
+            </div>
+            <Button
+              onClick={handleLogout}
+              variant="outline"
+              size="sm"
+              className="hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors"
+            >
+              <LogOut className="w-4 h-4 mr-2" />
               Sair
             </Button>
           </div>
@@ -136,8 +156,10 @@ function NavLink({ href, isActive, children, icon }: NavLinkProps) {
   return (
     <Link
       href={href}
-      className={`flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-        isActive ? "bg-blue-100 text-blue-700" : "text-gray-600 hover:text-blue-600 hover:bg-gray-100"
+      className={`flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-300 ${
+        isActive
+          ? "bg-gradient-to-r from-blue-100 to-red-100 text-blue-700 shadow-sm"
+          : "text-gray-600 hover:text-blue-600 hover:bg-gradient-to-r hover:from-blue-50 hover:to-red-50"
       }`}
     >
       {icon}
@@ -150,8 +172,10 @@ function MobileNavLink({ href, isActive, children }: Omit<NavLinkProps, "icon">)
   return (
     <Link
       href={href}
-      className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-        isActive ? "bg-blue-100 text-blue-700" : "text-gray-600 hover:text-blue-600 hover:bg-gray-100"
+      className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-300 ${
+        isActive
+          ? "bg-gradient-to-r from-blue-100 to-red-100 text-blue-700"
+          : "text-gray-600 hover:text-blue-600 hover:bg-gradient-to-r hover:from-blue-50 hover:to-red-50"
       }`}
     >
       {children}
