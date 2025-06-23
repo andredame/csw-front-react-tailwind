@@ -1,0 +1,133 @@
+/* SARC Color System - Red and Blue Theme */
+@layer components {
+  /* Primary color variables for SARC */
+  :root {
+    --sarc-blue: #1e40af;
+    --sarc-blue-light: #3b82f6;
+    --sarc-blue-dark: #1e3a8a;
+    --sarc-red: #dc2626;
+    --sarc-red-light: #ef4444;
+    --sarc-red-dark: #b91c1c;
+    --sarc-gold: #f59e0b;
+    --sarc-gold-light: #fbbf24;
+  }
+
+  /* Enhanced gradient effects with SARC colors */
+  .sarc-gradient-primary {
+    background: linear-gradient(135deg, var(--sarc-blue) 0%, var(--sarc-red) 100%);
+  }
+
+  .sarc-gradient-button {
+    background: linear-gradient(135deg, var(--sarc-blue) 0%, var(--sarc-blue-light) 30%, var(--sarc-red) 100%);
+    background-size: 200% 200%;
+    animation: gradient-shift 3s ease infinite;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .sarc-gradient-button:hover {
+    background-position: right center;
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px rgba(30, 64, 175, 0.4);
+  }
+
+  .sarc-gradient-card {
+    background: linear-gradient(135deg, rgba(30, 64, 175, 0.05) 0%, rgba(220, 38, 38, 0.05) 100%);
+  }
+
+  .sarc-gradient-text {
+    background: linear-gradient(135deg, var(--sarc-blue) 0%, var(--sarc-red) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  /* SARC themed backgrounds */
+  .sarc-bg-primary {
+    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 50%, #fef2f2 100%);
+  }
+
+  .sarc-bg-card {
+    background: rgba(255, 255, 255, 0.95);
+    border: 1px solid rgba(30, 64, 175, 0.1);
+  }
+
+  /* SARC navigation styles */
+  .sarc-nav-active {
+    background: linear-gradient(135deg, rgba(30, 64, 175, 0.1) 0%, rgba(220, 38, 38, 0.1) 100%);
+    border: 1px solid rgba(30, 64, 175, 0.2);
+    color: var(--sarc-blue-dark);
+  }
+
+  /* SARC input styles */
+  .sarc-input {
+    background: linear-gradient(135deg, rgba(30, 64, 175, 0.05) 0%, rgba(248, 250, 252, 1) 100%);
+    border: 2px solid transparent;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .sarc-input:focus {
+    background: linear-gradient(135deg, rgba(30, 64, 175, 0.1) 0%, rgba(255, 255, 255, 1) 100%);
+    border-color: var(--sarc-blue);
+    box-shadow: 0 0 0 3px rgba(30, 64, 175, 0.1);
+  }
+
+  /* SARC emblem container */
+  .sarc-emblem {
+    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+    border: 3px solid rgba(30, 64, 175, 0.2);
+    box-shadow: 0 8px 25px rgba(30, 64, 175, 0.15);
+  }
+
+  .sarc-emblem:hover {
+    transform: scale(1.05);
+    box-shadow: 0 12px 35px rgba(30, 64, 175, 0.25);
+    border-color: rgba(220, 38, 38, 0.3);
+  }
+
+  /* SARC stats cards */
+  .sarc-stat-card {
+    background: linear-gradient(135deg, rgba(30, 64, 175, 0.03) 0%, rgba(220, 38, 38, 0.03) 100%);
+    border: 1px solid rgba(30, 64, 175, 0.1);
+  }
+
+  .sarc-stat-card:hover {
+    background: linear-gradient(135deg, rgba(30, 64, 175, 0.08) 0%, rgba(220, 38, 38, 0.08) 100%);
+    border-color: rgba(30, 64, 175, 0.2);
+  }
+
+  /* SARC quick access buttons */
+  .sarc-quick-access {
+    background: rgba(255, 255, 255, 0.9);
+    border: 2px solid rgba(30, 64, 175, 0.1);
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .sarc-quick-access:hover {
+    background: linear-gradient(135deg, rgba(30, 64, 175, 0.05) 0%, rgba(220, 38, 38, 0.05) 100%);
+    border-color: rgba(30, 64, 175, 0.3);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(30, 64, 175, 0.15);
+  }
+
+  /* SARC modal styles */
+  .sarc-modal-header {
+    background: linear-gradient(135deg, var(--sarc-blue) 0%, var(--sarc-red) 100%);
+  }
+
+  /* SARC error styles */
+  .sarc-error-gradient {
+    background: linear-gradient(135deg, var(--sarc-red) 0%, var(--sarc-red-dark) 100%);
+  }
+
+  @keyframes gradient-shift {
+    0% {
+      background-position: 0% 50%;
+    }
+    50% {
+      background-position: 100% 50%;
+    }
+    100% {
+      background-position: 0% 50%;
+    }
+  }
+}

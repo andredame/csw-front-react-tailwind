@@ -1,0 +1,132 @@
+/* Enhanced wave patterns and animations */
+@layer components {
+  .wave-container {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .wave-background {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  .wave {
+    position: absolute;
+    left: 0;
+    width: 100%;
+    overflow: hidden;
+    line-height: 0;
+  }
+
+  .wave svg {
+    position: relative;
+    display: block;
+    width: calc(100% + 1.3px);
+    height: 60px;
+  }
+
+  /* Navbar wave decoration */
+  .navbar-wave {
+    bottom: -1px;
+    animation: wave-gentle 8s ease-in-out infinite;
+  }
+
+  .navbar-wave svg {
+    height: 30px;
+  }
+
+  /* Card wave decorations */
+  .card-wave-top {
+    top: 0;
+    animation: wave-float 12s ease-in-out infinite;
+  }
+
+  .card-wave-bottom {
+    bottom: 0;
+    transform: rotate(180deg);
+    animation: wave-float 15s ease-in-out infinite reverse;
+  }
+
+  /* Modal wave decoration */
+  .modal-wave {
+    top: 0;
+    animation: wave-gentle 10s ease-in-out infinite;
+  }
+
+  /* Background waves for pages */
+  .page-wave-1 {
+    top: 10%;
+    animation: wave-float 20s ease-in-out infinite;
+    opacity: 0.03;
+  }
+
+  .page-wave-2 {
+    top: 30%;
+    animation: wave-float 25s ease-in-out infinite reverse;
+    opacity: 0.02;
+  }
+
+  .page-wave-3 {
+    top: 60%;
+    animation: wave-float 18s ease-in-out infinite;
+    opacity: 0.04;
+  }
+
+  /* Wave animations */
+  @keyframes wave-float {
+    0%,
+    100% {
+      transform: translateX(0px) translateY(0px);
+    }
+    25% {
+      transform: translateX(-20px) translateY(-8px);
+    }
+    50% {
+      transform: translateX(15px) translateY(5px);
+    }
+    75% {
+      transform: translateX(-8px) translateY(-3px);
+    }
+  }
+
+  @keyframes wave-gentle {
+    0%,
+    100% {
+      transform: translateX(0px);
+    }
+    50% {
+      transform: translateX(-10px);
+    }
+  }
+
+  /* Responsive wave adjustments */
+  @media (max-width: 768px) {
+    .wave svg {
+      height: 40px;
+    }
+
+    .navbar-wave svg {
+      height: 20px;
+    }
+
+    .card-wave-top svg,
+    .card-wave-bottom svg {
+      height: 30px;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .wave svg {
+      height: 30px;
+    }
+
+    .navbar-wave svg {
+      height: 15px;
+    }
+  }
+}
