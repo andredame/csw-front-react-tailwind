@@ -1,3 +1,4 @@
+// aulas-page.tsx
 "use client"
 
 import { useState, useEffect } from "react"
@@ -13,6 +14,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Loader2, BookOpen, Clock, Users } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { useAuth } from "@/providers/auth-provider" // Import useAuth to get user info
 
 const AulasPage = () => {
   const [aulas, setAulas] = useState<any[]>([])
@@ -27,9 +29,11 @@ const AulasPage = () => {
     descricao: "",
     turmaId: "",
     salaId: "",
-    disciplinaId: "", // This might be redundant if turma.disciplina.id exists
+    // REMOVIDO: disciplinaId não é mais necessário aqui
     periodo: "JK",
   })
+
+  const { user } = useAuth() // Get user from auth context
 
   const periodos = [
     { value: "AB", label: "AB (Manhã)" },
@@ -46,98 +50,114 @@ const AulasPage = () => {
   const loadData = async () => {
     try {
       setLoading(true)
-      setError(null)
-      const [aulasResponse, turmasResponse] = await Promise.all([
-        api.get("/api/aulas"),
-        api.get("/api/turmas")
-      ])
-
-      setAulas(aulasResponse.data)
-      setTurmas(turmasResponse.data)
-      // Salas are loaded when the modal opens
+      setError(null); // Limpa erros anteriores
+      let aulasResponse;
+      // Se o usuário logado for um PROFESSOR e tiver um ID, busca apenas as aulas dele
+      if (user?.id && user?.roles?.includes('PROFESSOR')) {
+        
+        aulasResponse = await api.get(`/api/aulas/professor/${user.id}`); // Busca aulas específicas do professor
+      } else {
+        // Para ADMIN, COORDENADOR ou ALUNO, busca todas as aulas (ou aulas relevantes, dependendo da lógica do backend para /api/aulas geral)
+          aulasResponse = await api.get("/api/aulas");
+      }
+      
+      const turmasResponse = await api.get("/api/turmas"); // Busca todas as turmas para o dropdown
+      
+      setAulas(aulasResponse.data);
+      setTurmas(turmasResponse.data);
     } catch (err: any) {
-      console.error("Erro ao carregar dados:", err)
-      setError(err.response?.data?.message || "Falha ao carregar aulas e turmas.");
+      console.error("Erro ao carregar dados:", err);
+      setError(err.response?.data?.message || "Falha ao carregar aulas. Tente novamente.");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const loadSalas = async () => {
     try {
-      setError(null)
-      const response = await api.get("/api/predios")
-      const predios = response.data
+      setError(null); // Clear previous errors
+      const response = await api.get("/api/predios");
+      const predios = response.data;
 
-      const todasSalas: any[] = []
+      const todasSalas: any[] = [];
       for (const predio of predios) {
         try {
-          const salasResponse = await api.get(`/api/predios/${predio.id}/salas`)
-          todasSalas.push(...salasResponse.data.map((sala: any) => ({ ...sala, predioNome: predio.nome })))
-        } catch (error) {
-          console.error(`Erro ao carregar salas do prédio ${predio.id}:`, error)
+          const salasResponse = await api.get(`/api/predios/${predio.id}/salas`);
+          todasSalas.push(...salasResponse.data.map((sala: any) => ({ ...sala, predioNome: predio.nome })));
+        } catch (err: any) {
+          console.warn(`Erro ao carregar salas do prédio ${predio.id}:`, err.response?.data?.message || err.message);
+          // Não lança erro aqui, apenas loga para falhas de prédio individual
         }
       }
-      setSalas(todasSalas)
+      setSalas(todasSalas);
     } catch (err: any) {
-      console.error("Erro ao carregar salas:", err)
+      console.error("Erro ao carregar salas:", err);
       setError(err.response?.data?.message || "Falha ao carregar salas disponíveis.");
     }
-  }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError(null)
+    e.preventDefault();
+    setError(null); // Limpa erros anteriores
+
     try {
+      if (!user?.id) {
+        setError("ID do usuário não disponível. Por favor, faça login novamente.");
+        return;
+      }
+
+      // Backend espera AulaRequestDTO com turmaId, salaId, data, periodo, descricao.
+      // disciplinaId é inferido da turma no backend.
       const aulaData = {
-        ...formData,
+        data: formData.data, // YYYY-MM-DD string do input type="date"
+        descricao: formData.descricao,
         turmaId: Number.parseInt(formData.turmaId),
         salaId: Number.parseInt(formData.salaId),
-        disciplinaId: formData.disciplinaId ? Number.parseInt(formData.disciplinaId) : null, // Handle optional disciplinaId
-      }
+        periodo: formData.periodo,
+      };
 
       if (editingAula) {
-        await api.put(`/api/aulas/${editingAula.id}`, aulaData)
+        await api.put(`/api/aulas/${editingAula.id}`, aulaData);
       } else {
-        await api.post("/api/aulas", aulaData)
+        await api.post("/api/aulas", aulaData); // Controller lida com a passagem de professorId do contexto
       }
 
-      setShowModal(false)
-      setEditingAula(null)
-      resetForm()
-      loadData()
+      setShowModal(false);
+      setEditingAula(null);
+      resetForm();
+      loadData(); // Recarrega dados após operação bem-sucedida
     } catch (err: any) {
-      console.error("Erro ao salvar aula:", err)
-      setError(err.response?.data?.message || "Falha ao salvar aula. Verifique os dados.");
+      console.error("Erro ao salvar aula:", err);
+      setError(err.response?.data?.message || "Erro ao salvar aula. Verifique os dados e tente novamente.");
     }
-  }
+  };
 
   const handleEdit = (aula: any) => {
-    setEditingAula(aula)
+    setEditingAula(aula);
     setFormData({
-      data: aula.data,
+      data: aula.data, // LocalDate vem como string YYYY-MM-DD
       descricao: aula.descricao || "",
       turmaId: aula.turma?.id?.toString() || "",
       salaId: aula.sala?.id?.toString() || "",
-      disciplinaId: aula.turma?.disciplina?.id?.toString() || "",
+      // REMOVIDO: disciplinaId não é mais necessário aqui
       periodo: aula.periodo || "JK",
-    })
-    loadSalas(); // Load salas when editing an aula
-    setShowModal(true)
-  }
+    });
+    loadSalas(); // Carrega salas ao abrir modal de edição
+    setShowModal(true);
+  };
 
   const handleDelete = async (id: number) => {
     if (window.confirm("Tem certeza que deseja excluir esta aula?")) {
-      setError(null)
       try {
-        await api.delete(`/api/aulas/${id}`)
-        loadData()
+        setError(null); // Limpa erros anteriores
+        await api.delete(`/api/aulas/${id}`);
+        loadData();
       } catch (err: any) {
-        console.error("Erro ao excluir aula:", err)
-        setError(err.response?.data?.message || "Falha ao excluir aula.");
+        console.error("Erro ao excluir aula:", err);
+        setError(err.response?.data?.message || "Erro ao excluir aula. Tente novamente mais tarde.");
       }
     }
-  }
+  };
 
   const resetForm = () => {
     setFormData({
@@ -145,23 +165,24 @@ const AulasPage = () => {
       descricao: "",
       turmaId: "",
       salaId: "",
-      disciplinaId: "",
+      // REMOVIDO: disciplinaId não é mais necessário aqui
       periodo: "JK",
-    })
-  }
+    });
+    setError(null); // Limpa erro ao resetar formulário
+  };
 
   const openCreateModal = () => {
-    setEditingAula(null)
-    resetForm()
-    loadSalas() // Load salas when opening create modal
-    setShowModal(true)
-  }
+    setEditingAula(null);
+    resetForm();
+    loadSalas(); // Carrega salas ao abrir modal de criação
+    setShowModal(true);
+  };
 
   const formatDate = (dateString: string) => {
     if (!dateString) return "N/A";
-    const date = new Date(dateString + "T00:00:00") // Assume YYYY-MM-DD format
-    return date.toLocaleDateString("pt-BR")
-  }
+    const [year, month, day] = dateString.split('-');
+    return `${day}/${month}/${year}`;
+  };
 
   if (loading) {
     return (
@@ -169,7 +190,7 @@ const AulasPage = () => {
         <Loader2 className="h-10 w-10 animate-spin text-blue-600" />
         <p className="ml-2 text-lg text-gray-700">Carregando aulas...</p>
       </div>
-    )
+    );
   }
 
   return (
@@ -291,7 +312,7 @@ const AulasPage = () => {
               <SelectContent>
                 {turmas.map((turma) => (
                   <SelectItem key={turma.id} value={turma.id.toString()}>
-                    {turma.numero} - {turma.disciplina?.nome || `Disciplina ID: ${turma.disciplinaId}`}
+                    {turma.numero} - {turma.disciplina?.nome || "Sem disciplina"}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -318,7 +339,8 @@ const AulasPage = () => {
             </Select>
           </div>
 
-          <div>
+          {/* REMOVIDO: Campo de Disciplina ID */}
+          {/* <div>
             <Label htmlFor="disciplinaId">Disciplina ID (Opcional)</Label>
             <Input
               id="disciplinaId"
@@ -328,7 +350,7 @@ const AulasPage = () => {
               onChange={(e) => setFormData({ ...formData, disciplinaId: e.target.value })}
               placeholder="Ex: 123"
             />
-          </div>
+          </div> */}
 
           <div>
             <Label htmlFor="periodo">Período</Label>

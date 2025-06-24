@@ -1,3 +1,4 @@
+// reservas-page.tsx
 "use client"
 
 import { useState, useEffect } from "react"
@@ -11,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Loader2, Calendar } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import Navbar from "./navbar" // Importe o componente Navbar
 
 const ReservasPage = () => {
   const [reservas, setReservas] = useState<any[]>([])
@@ -53,9 +55,10 @@ const ReservasPage = () => {
     e.preventDefault()
     setError(null)
     try {
+      // ALTERADO: Formato dos dados para enviar ao backend
       const reservaData = {
-        id_aula: Number.parseInt(formData.id_aula),
-        id_recurso: Number.parseInt(formData.id_recurso),
+        aula: { id: Number.parseInt(formData.id_aula) }, // Envia objeto aninhado com o ID da aula
+        recurso: { id: Number.parseInt(formData.id_recurso) }, // Envia objeto aninhado com o ID do recurso
       }
 
       await api.post("/api/reservas", reservaData)
@@ -138,148 +141,151 @@ const ReservasPage = () => {
   }
 
   return (
-    <div className="container mx-auto p-4">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">Minhas Reservas</h1>
-        <Button onClick={openCreateModal}>
-          Nova Reserva
-        </Button>
-      </div>
+    <div className="min-h-screen bg-gray-50 p-6"> {/* Adicionado min-h-screen e bg-gray-50 p-6 para espaçamento e fundo */}
+      <Navbar /> {/* ADICIONADO: Renderiza a Navbar aqui */}
+      <div className="container mx-auto p-4">
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-3xl font-bold text-gray-900">Minhas Reservas</h1>
+          <Button onClick={openCreateModal}>
+            Nova Reserva
+          </Button>
+        </div>
 
-      {error && (
-        <Alert variant="destructive" className="mb-4">
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
+        {error && (
+          <Alert variant="destructive" className="mb-4">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
 
-      {reservas.length === 0 ? (
-        <Card className="text-center p-8">
-          <CardHeader>
-            <Calendar className="w-16 h-16 mx-auto text-gray-400 mb-4" />
-            <CardTitle>Nenhuma reserva encontrada</CardTitle>
-            <CardDescription>Clique em "Nova Reserva" para fazer sua primeira reserva de recurso.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button onClick={openCreateModal}>
-              Criar Primeira Reserva
-            </Button>
-          </CardContent>
-        </Card>
-      ) : (
-        <Card>
-          <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Aula</TableHead>
-                  <TableHead>Data</TableHead>
-                  <TableHead>Período</TableHead>
-                  <TableHead>Recurso</TableHead>
-                  <TableHead>Status Recurso</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {reservas.map((reserva) => (
-                  <TableRow key={reserva.id}>
-                    <TableCell>
-                      {reserva.aula ? (
-                        <>
-                          <div className="font-medium">{reserva.aula.turma?.numero || "N/A"}</div>
-                          <div className="text-xs text-muted-foreground">
-                            {reserva.aula.sala?.nome || "Sala não informada"}
-                          </div>
-                        </>
-                      ) : (
-                        "N/A"
-                      )}
-                    </TableCell>
-                    <TableCell>{reserva.aula ? formatDate(reserva.aula.data) : "N/A"}</TableCell>
-                    <TableCell>
-                      {reserva.aula?.periodo && (
-                        <Badge variant="secondary" className="bg-blue-100 text-blue-800">
-                          {reserva.aula.periodo}
-                        </Badge>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {reserva.recurso ? (
-                        <>
-                          <div className="font-medium">{reserva.recurso.tipoRecurso?.nome || "Recurso"}</div>
-                          <div className="text-xs text-muted-foreground">ID: {reserva.recurso.id}</div>
-                        </>
-                      ) : (
-                        "N/A"
-                      )}
-                    </TableCell>
-                    <TableCell>{reserva.recurso?.status && getStatusBadge(reserva.recurso.status)}</TableCell>
-                    <TableCell className="text-right">
-                      <Button variant="destructive" size="sm" onClick={() => handleDelete(reserva.id)}>
-                        Cancelar
-                      </Button>
-                    </TableCell>
+        {reservas.length === 0 ? (
+          <Card className="text-center p-8">
+            <CardHeader>
+              <Calendar className="w-16 h-16 mx-auto text-gray-400 mb-4" />
+              <CardTitle>Nenhuma reserva encontrada</CardTitle>
+              <CardDescription>Clique em "Nova Reserva" para fazer sua primeira reserva de recurso.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={openCreateModal}>
+                Criar Primeira Reserva
+              </Button>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card>
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Aula</TableHead>
+                    <TableHead>Data</TableHead>
+                    <TableHead>Período</TableHead>
+                    <TableHead>Recurso</TableHead>
+                    <TableHead>Status Recurso</TableHead>
+                    <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      )}
+                </TableHeader>
+                <TableBody>
+                  {reservas.map((reserva) => (
+                    <TableRow key={reserva.id}>
+                      <TableCell>
+                        {reserva.aula ? (
+                          <>
+                            <div className="font-medium">{reserva.aula.turma?.numero || "N/A"}</div>
+                            <div className="text-xs text-muted-foreground">
+                              {reserva.aula.sala?.nome || "Sala não informada"}
+                            </div>
+                          </>
+                        ) : (
+                          "N/A"
+                        )}
+                      </TableCell>
+                      <TableCell>{reserva.aula ? formatDate(reserva.aula.data) : "N/A"}</TableCell>
+                      <TableCell>
+                        {reserva.aula?.periodo && (
+                          <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+                            {reserva.aula.periodo}
+                          </Badge>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {reserva.recurso ? (
+                          <>
+                            <div className="font-medium">{reserva.recurso.tipoRecurso?.nome || "Recurso"}</div>
+                            <div className="text-xs text-muted-foreground">ID: {reserva.recurso.id}</div>
+                          </>
+                        ) : (
+                          "N/A"
+                        )}
+                      </TableCell>
+                      <TableCell>{reserva.recurso?.status && getStatusBadge(reserva.recurso.status)}</TableCell>
+                      <TableCell className="text-right">
+                        <Button variant="destructive" size="sm" onClick={() => handleDelete(reserva.id)}>
+                          Cancelar
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        )}
 
-      <Modal isOpen={showModal} onClose={() => setShowModal(false)} title="Nova Reserva">
-        <form onSubmit={handleSubmit} className="p-4 space-y-4">
-          <div>
-            <Label htmlFor="id_aula">Aula</Label>
-            <Select
-              value={formData.id_aula}
-              onValueChange={(value) => setFormData({ ...formData, id_aula: value })}
-              required
-            >
-              <SelectTrigger id="id_aula">
-                <SelectValue placeholder="Selecione uma aula" />
-              </SelectTrigger>
-              <SelectContent>
-                {aulas.map((aula) => (
-                  <SelectItem key={aula.id} value={aula.id.toString()}>
-                    {formatDate(aula.data)} - {aula.turma?.numero || "Turma N/A"} - {aula.periodo} - {aula.sala?.nome || "Sala N/A"}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div>
-            <Label htmlFor="id_recurso">Recurso</Label>
-            <Select
-              value={formData.id_recurso}
-              onValueChange={(value) => setFormData({ ...formData, id_recurso: value })}
-              required
-            >
-              <SelectTrigger id="id_recurso">
-                <SelectValue placeholder="Selecione um recurso" />
-              </SelectTrigger>
-              <SelectContent>
-                {recursos
-                  .filter((recurso) => recurso.status === "DISPONIVEL")
-                  .map((recurso) => (
-                    <SelectItem key={recurso.id} value={recurso.id.toString()}>
-                      {recurso.tipoRecurso?.nome || "Recurso"} (ID: {recurso.id})
+        <Modal isOpen={showModal} onClose={() => setShowModal(false)} title="Nova Reserva">
+          <form onSubmit={handleSubmit} className="p-4 space-y-4">
+            <div>
+              <Label htmlFor="id_aula">Aula</Label>
+              <Select
+                value={formData.id_aula}
+                onValueChange={(value) => setFormData({ ...formData, id_aula: value })}
+                required
+              >
+                <SelectTrigger id="id_aula">
+                  <SelectValue placeholder="Selecione uma aula" />
+                </SelectTrigger>
+                <SelectContent>
+                  {aulas.map((aula) => (
+                    <SelectItem key={aula.id} value={aula.id.toString()}>
+                      {formatDate(aula.data)} - {aula.turma?.numero || "Turma N/A"} - {aula.periodo} - {aula.sala?.nome || "Sala N/A"}
                     </SelectItem>
                   ))}
-              </SelectContent>
-            </Select>
-          </div>
+                </SelectContent>
+              </Select>
+            </div>
 
-          <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
-            <Button type="button" variant="outline" onClick={() => setShowModal(false)}>
-              Cancelar
-            </Button>
-            <Button type="submit">
-              Criar Reserva
-            </Button>
-          </div>
-        </form>
-      </Modal>
+            <div>
+              <Label htmlFor="id_recurso">Recurso</Label>
+              <Select
+                value={formData.id_recurso}
+                onValueChange={(value) => setFormData({ ...formData, id_recurso: value })}
+                required
+              >
+                <SelectTrigger id="id_recurso">
+                  <SelectValue placeholder="Selecione um recurso" />
+                </SelectTrigger>
+                <SelectContent>
+                  {recursos
+                    .filter((recurso) => recurso.status === "DISPONIVEL")
+                    .map((recurso) => (
+                      <SelectItem key={recurso.id} value={recurso.id.toString()}>
+                        {recurso.tipoRecurso?.nome || "Recurso"} (ID: {recurso.id})
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
+              <Button type="button" variant="outline" onClick={() => setShowModal(false)}>
+                Cancelar
+              </Button>
+              <Button type="submit">
+                Criar Reserva
+              </Button>
+            </div>
+          </form>
+        </Modal>
+      </div>
     </div>
   )
 }

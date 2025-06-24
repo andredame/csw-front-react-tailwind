@@ -36,10 +36,10 @@ export default function Dashboard() {
           turmasRes,
           aulasRes
         ] = await Promise.all([
-          api.get("/api/predios/count"), // Substitua pelo seu endpoint real
-          api.get("/api/salas/count"),   // Substitua pelo seu endpoint real
-          api.get("/api/turmas/count"),   // Substitua pelo seu endpoint real
-          api.get("/api/aulas/count")    // Substitua pelo seu endpoint real
+          api.get("/predios/count"), // Substitua pelo seu endpoint real
+          api.get("/salas/count"),   // Substitua pelo seu endpoint real
+          api.get("/turmas/count"),   // Substitua pelo seu endpoint real
+          api.get("/aulas/count")    // Substitua pelo seu endpoint real
         ]);
 
         setStats({

@@ -2,26 +2,27 @@
 import axios from "axios";
 
 const api = axios.create({
-  baseURL: "http://localhost:8081",
+  baseURL: "/api/data", // Altere isso para a nova rota de proxy do Next.js
   headers: {
     "Content-Type": "application/json",
   },
-  withCredentials: true, // IMPORTANT: Ensure cookies are sent with requests
+  withCredentials: true, // Ainda necessário para o navegador enviar os cookies httpOnly para o Next.js
 });
-
-// DEFINIMOS OS CAMINHOS QUE NÃO DEVEM ENVIAR UM TOKEN DE AUTORIZAÇÃO
-const AUTH_PATHS = ['/api/auth/login', '/api/auth/refresh'];
 
 api.interceptors.request.use(
   (config) => {
-    // For Next.js App Router with HTTP-only cookies, the browser automatically
-    // sends the 'token' cookie with requests to the same origin.
-    // Explicitly attaching the Authorization header is generally not needed
-    // unless your backend strictly requires it even with cookies.
-    // If it's an authentication path (login/refresh), ensure no Authorization header.
-    if (AUTH_PATHS.some(path => config.url.endsWith(path))) {
-      delete config.headers.Authorization;
+    // Para as rotas de autenticação (login, logout, me) que são do próprio Next.js
+    // Elas precisam acessar diretamente os endpoints internos do Next.js (/api/auth/...)
+    if (config.url.startsWith('/api/auth')) {
+      config.baseURL = '/api'; // Aponta para a raiz das APIs internas do Next.js
+    } else {
+      config.baseURL = '/api/data'; // Para todas as outras chamadas de dados, use o proxy
     }
+    
+    // Remova qualquer cabeçalho Authorization que possa ter sido adicionado anteriormente.
+    // O proxy do Next.js irá lidar com a adição do token Bearer.
+    delete config.headers.Authorization;
+
     return config;
   },
   (error) => {
@@ -32,18 +33,10 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
-    // For Next.js App Router with httpOnly cookies and server-side auth checks,
-    // the client-side does not typically handle token refreshing.
-    // If a 401 Unauthorized error occurs for API calls, it implies the session
-    // represented by the httpOnly cookie is no longer valid.
-    // The `AuthContext` (in `providers/auth-provider.tsx`) handles
-    // redirecting the user to the login page if their session is invalid
-    // when `checkAuthStatus` is called (e.g., on page load or when accessing protected routes).
-    // Therefore, the complex refresh token logic and direct logout calls are removed from here.
-
+    // Se a API Next.js de proxy retornar 401, o AuthProvider do Next.js
+    // já deve estar configurado para lidar com o redirecionamento.
     if (error.response?.status === 401) {
       console.warn("API request received 401. Relying on Next.js AuthProvider for session management and redirection.");
-      // No explicit action needed here; the AuthProvider will detect the invalid session.
     }
     return Promise.reject(error);
   }
