@@ -1,6 +1,8 @@
 // turmas-page.tsx
 "use client"
 
+import type React from "react"
+
 import { useState, useEffect } from "react"
 import api from "../src/services/api" // Adjust path to your API service
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -26,7 +28,7 @@ const TurmasPage = () => {
   const [showLinkProfessorModal, setShowLinkProfessorModal] = useState(false) // For linking professor modal
   const [editingTurma, setEditingTurma] = useState<any | null>(null)
   const [selectedTurmaId, setSelectedTurmaId] = useState<number | null>(null) // For linking operations
-  const [error, setError] = useState<string | null>(null); // State to handle API errors
+  const [error, setError] = useState<string | null>(null) // State to handle API errors
 
   const [formData, setFormData] = useState({
     numero: "",
@@ -45,7 +47,13 @@ const TurmasPage = () => {
     professorId: "",
   })
 
-  const { user } = useAuth(); // Obter informações do usuário logado
+  const { user } = useAuth() // Obter informações do usuário logado
+
+  // Verificar se o usuário logado é COORDENADOR
+  const isCoordenador = user?.roles?.includes("COORDENADOR")
+  // Verificar se o usuário logado é ADMIN (para o botão Nova Turma)
+  const isAdmin = user?.roles?.includes("ADMIN")
+
 
   useEffect(() => {
     loadData()
@@ -55,30 +63,30 @@ const TurmasPage = () => {
     try {
       setLoading(true)
       setError(null) // Limpa erros anteriores
-      
-      let turmasResponse;
+
+      let turmasResponse
       // Se o usuário logado for um PROFESSOR, busca apenas as turmas dele
-      if (user?.id && user?.roles?.includes('PROFESSOR') ) {
-        console.log("Carregando turmas para o professor:", user.id);
-        turmasResponse = await api.get(`/api/turmas/professor/${user.id}`); // Rota específica do professor
+      if (user?.id && user?.roles?.includes("PROFESSOR")) {
+        console.log("Carregando turmas para o professor:", user.id)
+        turmasResponse = await api.get(`/api/turmas/professor/${user.id}`) // Rota específica do professor
       } else {
         // Para ADMIN, COORDENADOR, ou outros, busca todas as turmas
-        turmasResponse = await api.get("/api/turmas"); // Rota geral
+        turmasResponse = await api.get("/api/turmas") // Rota geral
       }
 
       const [disciplinasResponse, usersResponse] = await Promise.all([
         api.get("/api/disciplinas"),
         api.get("/api/users"),
       ])
-      
+
       setTurmas(turmasResponse.data)
       setDisciplinas(disciplinasResponse.data)
-      const allUsers = usersResponse.data;
-      setProfessors(allUsers.filter((user: any) => user.roles && user.roles.includes('PROFESSOR')));
-      setAlunos(allUsers.filter((user: any) => user.roles && user.roles.includes('ALUNO')));
+      const allUsers = usersResponse.data
+      setProfessors(allUsers.filter((user: any) => user.roles && user.roles.includes("PROFESSOR")))
+      setAlunos(allUsers.filter((user: any) => user.roles && user.roles.includes("ALUNO")))
     } catch (err: any) {
       console.error("Erro ao carregar dados:", err)
-      setError(err.response?.data?.message || "Falha ao carregar turmas. Tente novamente.");
+      setError(err.response?.data?.message || "Falha ao carregar turmas. Tente novamente.")
     } finally {
       setLoading(false)
     }
@@ -107,7 +115,7 @@ const TurmasPage = () => {
       loadData()
     } catch (err: any) {
       console.error("Erro ao salvar turma:", err)
-      setError(err.response?.data?.message || "Erro ao salvar turma. Verifique os dados e tente novamente.");
+      setError(err.response?.data?.message || "Erro ao salvar turma. Verifique os dados e tente novamente.")
     }
   }
 
@@ -132,7 +140,7 @@ const TurmasPage = () => {
         loadData()
       } catch (err: any) {
         console.error("Erro ao excluir turma:", err)
-        setError(err.response?.data?.message || "Erro ao excluir turma. Tente novamente mais tarde.");
+        setError(err.response?.data?.message || "Erro ao excluir turma. Tente novamente mais tarde.")
       }
     }
   }
@@ -142,8 +150,8 @@ const TurmasPage = () => {
     setError(null) // Clear previous errors
     try {
       if (!selectedTurmaId || !linkAlunoFormData.alunoId) {
-        setError("Turma ou Aluno não selecionados.");
-        return;
+        setError("Turma ou Aluno não selecionados.")
+        return
       }
       await api.post(`/api/turmas/${selectedTurmaId}/alunos/${linkAlunoFormData.alunoId}`)
       setShowLinkAlunoModal(false)
@@ -151,7 +159,7 @@ const TurmasPage = () => {
       loadData()
     } catch (err: any) {
       console.error("Erro ao vincular aluno:", err)
-      setError(err.response?.data?.message || "Erro ao vincular aluno. Tente novamente mais tarde.");
+      setError(err.response?.data?.message || "Erro ao vincular aluno. Tente novamente mais tarde.")
     }
   }
 
@@ -160,8 +168,8 @@ const TurmasPage = () => {
     setError(null) // Clear previous errors
     try {
       if (!selectedTurmaId || !linkProfessorFormData.professorId) {
-        setError("Turma ou Professor não selecionados.");
-        return;
+        setError("Turma ou Professor não selecionados.")
+        return
       }
       await api.post(`/api/turmas/${selectedTurmaId}/professores/${linkProfessorFormData.professorId}`)
       setShowLinkProfessorModal(false)
@@ -169,7 +177,7 @@ const TurmasPage = () => {
       loadData()
     } catch (err: any) {
       console.error("Erro ao vincular professor:", err)
-      setError(err.response?.data?.message || "Erro ao vincular professor. Tente novamente mais tarde.");
+      setError(err.response?.data?.message || "Erro ao vincular professor. Tente novamente mais tarde.")
     }
   }
 
@@ -182,7 +190,7 @@ const TurmasPage = () => {
       horario: "",
       vagas: "",
     })
-    setError(null); // Clear error on form reset
+    setError(null) // Clear error on form reset
   }
 
   const openCreateModal = () => {
@@ -194,14 +202,14 @@ const TurmasPage = () => {
   const openLinkAlunoModal = (turmaId: number) => {
     setSelectedTurmaId(turmaId)
     setLinkAlunoFormData({ alunoId: "" })
-    setError(null); // Clear error for this modal
+    setError(null) // Clear error for this modal
     setShowLinkAlunoModal(true)
   }
 
   const openLinkProfessorModal = (turmaId: number) => {
     setSelectedTurmaId(turmaId)
     setLinkProfessorFormData({ professorId: "" })
-    setError(null); // Clear error for this modal
+    setError(null) // Clear error for this modal
     setShowLinkProfessorModal(true)
   }
 
@@ -215,15 +223,30 @@ const TurmasPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6"> {/* Adicionado min-h-screen e bg-gray-50 p-6 para espaçamento e fundo */}
-      <Navbar /> {/* ADICIONADO: Renderiza a Navbar aqui */}
-      <div className="container mx-auto px-4 py-8">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-red-50 wave-container relative">
+      {/* Background Wave Patterns */}
+      <div className="wave-background">
+        <div className="wave-pattern wave-pattern-1"></div>
+        <div className="wave-pattern wave-pattern-2"></div>
+        <div className="wave-pattern wave-pattern-3"></div>
+      </div>
+
+      <Navbar />
+
+      <div className="container mx-auto px-4 py-8 relative z-10">
         <div className="flex justify-between items-center mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Turmas</h1>
-            <p className="text-gray-600">Gerencie as turmas, disciplinas e alunos.</p>
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 via-red-600 to-yellow-600 bg-clip-text text-transparent mb-2">
+              Turmas
+            </h1>
+            <p className="text-gray-600">Gerencie as turmas, disciplinas e alunos</p>
           </div>
-          <Button onClick={openCreateModal}>Nova Turma</Button>
+          {/* Botão Nova Turma visível apenas para ADMIN e COORDENADOR */}
+          {(isAdmin || isCoordenador) && (
+            <Button onClick={openCreateModal} className="sarc-button-primary">
+              Nova Turma
+            </Button>
+          )}
         </div>
 
         {error && (
@@ -233,14 +256,21 @@ const TurmasPage = () => {
         )}
 
         {turmas.length === 0 ? (
-          <Card className="text-center p-8">
+          <Card className="sarc-card backdrop-blur-sm bg-white/95 shadow-xl text-center p-8">
             <CardHeader>
-              <Users className="w-16 h-16 mx-auto text-gray-400 mb-4" />
-              <CardTitle>Nenhuma turma encontrada</CardTitle>
-              <CardDescription>Não há turmas cadastradas no sistema.</CardDescription>
+              <div className="w-20 h-20 bg-gradient-to-br from-purple-500 to-blue-500 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg floating">
+                <Users className="w-10 h-10 text-white" />
+              </div>
+              <CardTitle className="text-2xl font-bold text-gray-800 mb-2">Nenhuma turma encontrada</CardTitle>
+              <CardDescription className="text-gray-600">Não há turmas cadastradas no sistema.</CardDescription>
             </CardHeader>
             <CardContent className="pt-0">
-              <Button onClick={openCreateModal}>Criar Primeira Turma</Button>
+              {/* Botão Criar Primeira Turma visível apenas para ADMIN e COORDENADOR */}
+              {(isAdmin || isCoordenador) && (
+                <Button onClick={openCreateModal} className="sarc-button-primary">
+                  Criar Primeira Turma
+                </Button>
+              )}
             </CardContent>
           </Card>
         ) : (
@@ -256,7 +286,7 @@ const TurmasPage = () => {
                     <TableHead>Vagas</TableHead>
                     <TableHead>Alunos</TableHead>
                     <TableHead>Professor</TableHead> {/* Added Professor column */}
-                    <TableHead className="text-right">Ações</TableHead>
+                    {isCoordenador && <TableHead className="text-right">Ações</TableHead>} {/* Ações visíveis apenas para COORDENADOR */}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -269,22 +299,40 @@ const TurmasPage = () => {
                       <TableCell>{turma.vagas}</TableCell>
                       <TableCell>{turma.alunos ? turma.alunos.length : 0} alunos</TableCell>
                       <TableCell>{turma.professor?.username || "N/A"}</TableCell> {/* Display professor username */}
-                      <TableCell className="text-right">
-                        <div className="flex justify-end space-x-2">
-                          <Button variant="outline" size="sm" onClick={() => handleEdit(turma)}>
-                            Editar
-                          </Button>
-                          <Button variant="destructive" size="sm" onClick={() => handleDelete(turma.id)}>
-                            Excluir
-                          </Button>
-                          <Button variant="outline" size="sm" onClick={() => openLinkAlunoModal(turma.id)}>
-                            Vincular Aluno
-                          </Button>
-                          <Button variant="outline" size="sm" onClick={() => openLinkProfessorModal(turma.id)}>
-                            Vincular Professor
-                          </Button>
-                        </div>
-                      </TableCell>
+                      {isCoordenador && 
+                        // Célula de Ações visível apenas para COORDENADOR
+                        <TableCell className="text-right">
+                          <div className="flex justify-end space-x-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleEdit(turma)}
+                              className="hover:bg-blue-50 hover:text-blue-600"
+                            >
+                              Editar
+                            </Button>
+                            <Button variant="destructive" size="sm" onClick={() => handleDelete(turma.id)}>
+                              Excluir
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => openLinkAlunoModal(turma.id)}
+                              className="hover:bg-green-50 hover:text-green-600"
+                            >
+                              + Aluno
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => openLinkProfessorModal(turma.id)}
+                              className="hover:bg-purple-50 hover:text-purple-600"
+                            >
+                              + Professor
+                            </Button>
+                          </div>
+                        </TableCell>
+                      }
                     </TableRow>
                   ))}
                 </TableBody>
@@ -294,168 +342,176 @@ const TurmasPage = () => {
         )}
 
         {/* Main CRUD Modal for Turma */}
-        <Modal isOpen={showModal} onClose={() => setShowModal(false)} title={editingTurma ? "Editar Turma" : "Nova Turma"}>
-          <form onSubmit={handleSubmit} className="p-4 space-y-4">
-            <div>
-              <Label htmlFor="numero">Número</Label>
-              <Input
-                id="numero"
-                name="numero"
-                value={formData.numero}
-                onChange={(e) => setFormData({ ...formData, numero: e.target.value })}
-                required
-              />
-            </div>
-            <div>
-              <Label htmlFor="disciplinaId">Disciplina</Label>
-              <Select
-                value={formData.disciplinaId}
-                onValueChange={(value) => setFormData({ ...formData, disciplinaId: value })}
-                required
-              >
-                <SelectTrigger id="disciplinaId">
-                  <SelectValue placeholder="Selecione uma disciplina" />
-                </SelectTrigger>
-                <SelectContent>
-                  {disciplinas.map((disciplina) => (
-                    <SelectItem key={disciplina.id} value={disciplina.id.toString()}>
-                      {disciplina.nome} ({disciplina.codigo})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label htmlFor="semestre">Semestre</Label>
-              <Input
-                id="semestre"
-                name="semestre"
-                value={formData.semestre}
-                onChange={(e) => setFormData({ ...formData, semestre: e.target.value })}
-                required
-              />
-            </div>
-            <div>
-              <Label htmlFor="professorId">Professor</Label>
-              <Select
-                value={formData.professorId}
-                onValueChange={(value) => setFormData({ ...formData, professorId: value })}
-                required
-              >
-                <SelectTrigger id="professorId">
-                  <SelectValue placeholder="Selecione um professor" />
-                </SelectTrigger>
-                <SelectContent>
-                  {professors.map((professor) => (
-                    <SelectItem key={professor.id} value={professor.id}>
-                      {professor.username} ({professor.email})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label htmlFor="horario">Horário</Label>
-              <Input
-                id="horario"
-                name="horario"
-                value={formData.horario}
-                onChange={(e) => setFormData({ ...formData, horario: e.target.value })}
-                required
-              />
-            </div>
-            <div>
-              <Label htmlFor="vagas">Vagas</Label>
-              <Input
-                id="vagas"
-                name="vagas"
-                type="number"
-                value={formData.vagas}
-                onChange={(e) => setFormData({ ...formData, vagas: e.target.value })}
-                min="0"
-                required
-              />
-            </div>
-            <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
-              <Button type="button" variant="outline" onClick={() => setShowModal(false)}>
-                Cancelar
-              </Button>
-              <Button type="submit">
-                {editingTurma ? "Atualizar" : "Criar"}
-              </Button>
-            </div>
-          </form>
-        </Modal>
+        {/* Este modal e seus inputs só devem ser usados se o usuário puder criar/editar */}
+        {(isAdmin || isCoordenador) && (
+          <Modal
+            isOpen={showModal}
+            onClose={() => setShowModal(false)}
+            title={editingTurma ? "Editar Turma" : "Nova Turma"}
+          >
+            <form onSubmit={handleSubmit} className="p-4 space-y-4">
+              <div>
+                <Label htmlFor="numero">Número</Label>
+                <Input
+                  id="numero"
+                  name="numero"
+                  value={formData.numero}
+                  onChange={(e) => setFormData({ ...formData, numero: e.target.value })}
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="disciplinaId">Disciplina</Label>
+                <Select
+                  value={formData.disciplinaId}
+                  onValueChange={(value) => setFormData({ ...formData, disciplinaId: value })}
+                  required
+                >
+                  <SelectTrigger id="disciplinaId">
+                    <SelectValue placeholder="Selecione uma disciplina" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {disciplinas.map((disciplina) => (
+                      <SelectItem key={disciplina.id} value={disciplina.id.toString()}>
+                        {disciplina.nome} ({disciplina.codigo})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="semestre">Semestre</Label>
+                <Input
+                  id="semestre"
+                  name="semestre"
+                  value={formData.semestre}
+                  onChange={(e) => setFormData({ ...formData, semestre: e.target.value })}
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="professorId">Professor</Label>
+                <Select
+                  value={formData.professorId}
+                  onValueChange={(value) => setFormData({ ...formData, professorId: value })}
+                  required
+                >
+                  <SelectTrigger id="professorId">
+                    <SelectValue placeholder="Selecione um professor" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {professors.map((professor) => (
+                      <SelectItem key={professor.id} value={professor.id}>
+                        {professor.username} ({professor.email})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="horario">Horário</Label>
+                <Input
+                  id="horario"
+                  name="horario"
+                  value={formData.horario}
+                  onChange={(e) => setFormData({ ...formData, horario: e.target.value })}
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="vagas">Vagas</Label>
+                <Input
+                  id="vagas"
+                  name="vagas"
+                  type="number"
+                  value={formData.vagas}
+                  onChange={(e) => setFormData({ ...formData, vagas: e.target.value })}
+                  min="0"
+                  required
+                />
+              </div>
+              <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
+                <Button type="button" variant="outline" onClick={() => setShowModal(false)}>
+                  Cancelar
+                </Button>
+                <Button type="submit">{editingTurma ? "Atualizar" : "Criar"}</Button>
+              </div>
+            </form>
+          </Modal>
+        )}
 
-        {/* Modal for Linking Aluno */}
-        <Modal isOpen={showLinkAlunoModal} onClose={() => setShowLinkAlunoModal(false)} title="Vincular Aluno à Turma">
-          <form onSubmit={handleLinkAluno} className="p-4 space-y-4">
-            <div>
-              <Label htmlFor="alunoId">Aluno</Label>
-              <Select
-                value={linkAlunoFormData.alunoId}
-                onValueChange={(value) => setLinkAlunoFormData({ ...linkAlunoFormData, alunoId: value })}
-                required
-              >
-                <SelectTrigger id="alunoId">
-                  <SelectValue placeholder="Selecione um aluno" />
-                </SelectTrigger>
-                <SelectContent>
-                  {alunos.map((aluno) => (
-                    <SelectItem key={aluno.id} value={aluno.id}>
-                      {aluno.username} ({aluno.email})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
-              <Button type="button" variant="outline" onClick={() => setShowLinkAlunoModal(false)}>
-                Cancelar
-              </Button>
-              <Button type="submit">
-                Vincular
-              </Button>
-            </div>
-          </form>
-        </Modal>
+        {/* Modal for Linking Aluno - visível apenas para COORDENADOR */}
+        {isCoordenador && (
+          <Modal isOpen={showLinkAlunoModal} onClose={() => setShowLinkAlunoModal(false)} title="Vincular Aluno à Turma">
+            <form onSubmit={handleLinkAluno} className="p-4 space-y-4">
+              <div>
+                <Label htmlFor="alunoId">Aluno</Label>
+                <Select
+                  value={linkAlunoFormData.alunoId}
+                  onValueChange={(value) => setLinkAlunoFormData({ ...linkAlunoFormData, alunoId: value })}
+                  required
+                >
+                  <SelectTrigger id="alunoId">
+                    <SelectValue placeholder="Selecione um aluno" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {alunos.map((aluno) => (
+                      <SelectItem key={aluno.id} value={aluno.id}>
+                        {aluno.username} ({aluno.email})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
+                <Button type="button" variant="outline" onClick={() => setShowLinkAlunoModal(false)}>
+                  Cancelar
+                </Button>
+                <Button type="submit">Vincular</Button>
+              </div>
+            </form>
+          </Modal>
+        )}
 
-        {/* Modal for Linking Professor */}
-        <Modal isOpen={showLinkProfessorModal} onClose={() => setShowLinkProfessorModal(false)} title="Vincular Professor à Turma">
-          <form onSubmit={handleLinkProfessor} className="p-4 space-y-4">
-            <div>
-              <Label htmlFor="professorId">Professor</Label>
-              <Select
-                value={linkProfessorFormData.professorId}
-                onValueChange={(value) => setLinkProfessorFormData({ ...linkProfessorFormData, professorId: value })}
-                required
-              >
-                <SelectTrigger id="professorId">
-                  <SelectValue placeholder="Selecione um professor" />
-                </SelectTrigger>
-                <SelectContent>
-                  {professors.map((professor) => (
-                    <SelectItem key={professor.id} value={professor.id}>
-                      {professor.username} ({professor.email})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
-              <Button type="button" variant="outline" onClick={() => setShowLinkProfessorModal(false)}>
-                Cancelar
-              </Button>
-              <Button type="submit">
-                Vincular
-              </Button>
-            </div>
-          </form>
-        </Modal>
+        {/* Modal for Linking Professor - visível apenas para COORDENADOR */}
+        {isCoordenador && (
+          <Modal
+            isOpen={showLinkProfessorModal}
+            onClose={() => setShowLinkProfessorModal(false)}
+            title="Vincular Professor à Turma"
+          >
+            <form onSubmit={handleLinkProfessor} className="p-4 space-y-4">
+              <div>
+                <Label htmlFor="professorId">Professor</Label>
+                <Select
+                  value={linkProfessorFormData.professorId}
+                  onValueChange={(value) => setLinkProfessorFormData({ ...linkProfessorFormData, professorId: value })}
+                  required
+                >
+                  <SelectTrigger id="professorId">
+                    <SelectValue placeholder="Selecione um professor" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {professors.map((professor) => (
+                      <SelectItem key={professor.id} value={professor.id}>
+                        {professor.username} ({professor.email})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
+                <Button type="button" variant="outline" onClick={() => setShowLinkProfessorModal(false)}>
+                  Cancelar
+                </Button>
+                <Button type="submit">Vincular</Button>
+              </div>
+            </form>
+          </Modal>
+        )}
       </div>
     </div>
   )
 }
 
-
-export default TurmasPage;
+export default TurmasPage

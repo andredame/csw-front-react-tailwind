@@ -7,64 +7,35 @@ import { useAuth } from "@/providers/auth-provider"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
-import { Building, Users, Calendar, BookOpen, Settings, TrendingUp, Clock, MapPin, User, Loader2 } from "lucide-react" // Importar Loader2
+import { Calendar, User, Loader2, Clock } from "lucide-react" // Importar Loader2
 import Navbar from "./navbar"
 import api from "../src/services/api" // Importar a instância Axios para as chamadas da API
-
+import { Badge } from "@/components/ui/badge"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 
 export default function Dashboard() {
   const { user } = useAuth()
-  const [stats, setStats] = useState({
-    predios: '...',
-    salas: '...',
-    turmas: '...',
-    aulas: '...',
-  });
-  const [loadingStats, setLoadingStats] = useState(true);
-  const [statsError, setStatsError] = useState<string | null>(null);
-
+  const [aulas, setAulas] = useState<any[]>([])
+  const [loadingAulas, setLoadingAulas] = useState(true)
+  const [aulasError, setAulasError] = useState<string | null>(null)
 
   useEffect(() => {
-    const fetchStats = async () => {
-      setLoadingStats(true);
-      setStatsError(null);
+    const fetchAulas = async () => {
+      setLoadingAulas(true)
+      setAulasError(null)
       try {
-        // Exemplo de como você chamaria seus novos endpoints de contagem
-        const [
-          prediosRes,
-          salasRes,
-          turmasRes,
-          aulasRes
-        ] = await Promise.all([
-          api.get("/predios/count"), // Substitua pelo seu endpoint real
-          api.get("/salas/count"),   // Substitua pelo seu endpoint real
-          api.get("/turmas/count"),   // Substitua pelo seu endpoint real
-          api.get("/aulas/count")    // Substitua pelo seu endpoint real
-        ]);
-
-        setStats({
-          predios: prediosRes.data.toString(),
-          salas: salasRes.data.toString(),
-          turmas: turmasRes.data.toString(),
-          aulas: aulasRes.data.toString(),
-        });
-      } catch (err) {
-        console.error("Erro ao carregar estatísticas do dashboard:", err);
-        setStatsError("Falha ao carregar estatísticas.");
-        setStats({
-          predios: 'N/A',
-          salas: 'N/A',
-          turmas: 'N/A',
-          aulas: 'N/A',
-        });
+        const response = await api.get("/api/aulas")
+        setAulas(response.data)
+      } catch (err: any) {
+        console.error("Erro ao carregar aulas:", err)
+        setAulasError("Falha ao carregar aulas.")
       } finally {
-        setLoadingStats(false);
+        setLoadingAulas(false)
       }
-    };
+    }
 
-    fetchStats();
-  }, []); // Array de dependências vazio para rodar apenas uma vez
-
+    fetchAulas()
+  }, [])
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-red-50 wave-container relative">
@@ -92,146 +63,91 @@ export default function Dashboard() {
                 Olá, <span className="font-semibold text-blue-600">{user?.username}</span>
               </p>
               <div className="flex flex-wrap justify-center md:justify-start gap-2">
-                {user?.roles?.filter(role => 
-                  // Filtra para incluir apenas os roles de negócio desejados
-                  ["PROFESSOR", "ADMIN", "COORDENADOR", "ALUNO"].includes(role.toUpperCase()) &&
-                  // Exclui roles técnicos como 'default-roles-sarc', 'offline_access', 'uma_authorization'
-                  !["default-roles-sarc", "offline_access", "uma_authorization"].includes(role.toLowerCase())
-                ).map((role, index) => (
-                  <span
-                    key={role}
-                    className={`px-3 py-1 rounded-full text-sm font-medium ${
-                      role === "ADMIN"
-                        ? "bg-red-100 text-red-700"
-                        : role === "COORDENADOR"
-                          ? "bg-blue-100 text-blue-700"
-                          : role === "PROFESSOR"
-                            ? "bg-green-100 text-green-700"
-                            : "bg-purple-100 text-purple-700" // Cor padrão para ALUNO ou outros roles de negócio
-                    }`}
-                  >
-                    {role}
-                  </span>
-                ))}
+                {user?.roles
+                  ?.filter(
+                    (role) =>
+                      // Filtra para incluir apenas os roles de negócio desejados
+                      ["PROFESSOR", "ADMIN", "COORDENADOR", "ALUNO"].includes(role.toUpperCase()) &&
+                      // Exclui roles técnicos como 'default-roles-sarc', 'offline_access', 'uma_authorization'
+                      !["default-roles-sarc", "offline_access", "uma_authorization"].includes(role.toLowerCase()),
+                  )
+                  .map((role, index) => (
+                    <span
+                      key={role}
+                      className={`px-3 py-1 rounded-full text-sm font-medium ${
+                        role === "ADMIN"
+                          ? "bg-red-100 text-red-700"
+                          : role === "COORDENADOR"
+                            ? "bg-blue-100 text-blue-700"
+                            : role === "PROFESSOR"
+                              ? "bg-green-100 text-green-700"
+                              : "bg-purple-100 text-purple-700" // Cor padrão para ALUNO ou outros roles de negócio
+                      }`}
+                    >
+                      {role}
+                    </span>
+                  ))}
               </div>
             </div>
           </div>
           <div className="w-full h-1 bg-gradient-to-r from-blue-600 via-red-600 to-yellow-600 rounded-full opacity-60"></div>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          {loadingStats ? (
-            // Exibir esqueletos ou loading indicators enquanto os dados carregam
-            <>
-              <StatsCardSkeleton />
-              <StatsCardSkeleton />
-              <StatsCardSkeleton />
-              <StatsCardSkeleton />
-            </>
-          ) : (
-            <>
-              <StatsCard
-                title="Prédios"
-                value={stats.predios}
-                description="Prédios cadastrados"
-                icon={<Building className="w-8 h-8" />}
-                color="blue"
-                trend="+2 este mês" // Estes trends ainda são fixos
-              />
-              <StatsCard
-                title="Salas"
-                value={stats.salas}
-                description="Salas disponíveis"
-                icon={<MapPin className="w-8 h-8" />}
-                color="green"
-                trend="100% ocupação" // Estes trends ainda são fixos
-              />
-              <StatsCard
-                title="Turmas"
-                value={stats.turmas}
-                description="Turmas ativas"
-                icon={<Users className="w-8 h-8" />}
-                color="purple"
-                trend="+3 novas" // Estes trends ainda são fixos
-              />
-              <StatsCard
-                title="Aulas"
-                value={stats.aulas}
-                description="Aulas agendadas"
-                icon={<Calendar className="w-8 h-8" />}
-                color="orange"
-                trend="Esta semana" // Estes trends ainda são fixos
-              />
-            </>
-          )}
-          {statsError && <div className="col-span-full text-center text-red-600 text-sm">{statsError}</div>}
-        </div>
-
-        {/* Quick Actions */}
+        {/* Próximas Aulas */}
         <Card className="sarc-card backdrop-blur-sm bg-white/95 shadow-xl">
           <CardHeader>
-            <div className="flex items-center space-x-3">
-              <div className="p-2 bg-gradient-to-r from-blue-100 to-red-100 rounded-lg">
-                <TrendingUp className="w-6 h-6 text-blue-600" />
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className="p-2 bg-gradient-to-r from-blue-100 to-red-100 rounded-lg">
+                  <Calendar className="w-6 h-6 text-blue-600" />
+                </div>
+                <div>
+                  <CardTitle className="text-2xl font-bold text-gray-800">Próximas Aulas</CardTitle>
+                  <CardDescription>Suas aulas programadas para os próximos dias</CardDescription>
+                </div>
               </div>
-              <div>
-                <CardTitle className="text-2xl font-bold text-gray-800">Acesso Rápido</CardTitle>
-                <CardDescription>Navegue rapidamente para as principais funcionalidades</CardDescription>
-              </div>
+              <Button variant="outline" asChild>
+                <Link href="/aulas">Ver todas</Link>
+              </Button>
             </div>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {user?.roles?.includes("ADMIN") || user?.roles?.includes("COORDENADOR") ? (
-                <QuickActionCard
-                  title="Gerenciar Prédios"
-                  description="Administrar prédios e salas do campus"
-                  href="/predios"
-                  icon={<Building className="w-6 h-6" />}
-                  color="blue"
-                />
-              ) : null}
-
-              {user?.roles?.includes("PROFESSOR") || user?.roles?.includes("COORDENADOR") ? (
-                <QuickActionCard
-                  title="Minhas Turmas"
-                  description="Visualizar e gerenciar turmas atribuídas"
-                  href="/turmas"
-                  icon={<Users className="w-6 h-6" />}
-                  color="green"
-                />
-              ) : null}
-
-              {user?.roles?.includes("PROFESSOR") ? (
-                <>
-                  <QuickActionCard
-                    title="Minhas Aulas"
-                    description="Gerenciar cronograma de aulas"
-                    href="/aulas"
-                    icon={<BookOpen className="w-6 h-6" />}
-                    color="purple"
-                  />
-                  <QuickActionCard
-                    title="Reservas"
-                    description="Reservar recursos para aulas"
-                    href="/reservas"
-                    icon={<Clock className="w-6 h-6" />}
-                    color="orange"
-                  />
-                </>
-              ) : null}
-
-              {user?.roles?.includes("ADMIN") || user?.roles?.includes("COORDENADOR") ? (
-                <QuickActionCard
-                  title="Recursos"
-                  description="Gerenciar equipamentos e materiais"
-                  href="/recursos"
-                  icon={<Settings className="w-6 h-6" />}
-                  color="red"
-                />
-              ) : null}
-            </div>
+            {loadingAulas ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+                <p className="ml-2 text-gray-700">Carregando aulas...</p>
+              </div>
+            ) : aulasError ? (
+              <Alert variant="destructive">
+                <AlertDescription>{aulasError}</AlertDescription>
+              </Alert>
+            ) : aulas.length === 0 ? (
+              <div className="text-center py-8">
+                <Calendar className="w-16 h-16 mx-auto text-gray-400 mb-4" />
+                <p className="text-gray-600">Nenhuma aula programada</p>
+                <p className="text-sm text-gray-500 mt-2">Suas próximas aulas aparecerão aqui</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {aulas
+                  
+                  .sort((a: { data: string; periodo: string }, b: { data: string; periodo: string }) => {
+                    // Sort by date, then by period
+                    const dateA = new Date(a.data + "T00:00:00")
+                    const dateB = new Date(b.data + "T00:00:00")
+                    if (dateA.getTime() !== dateB.getTime()) {
+                      return dateA.getTime() - dateB.getTime()
+                    }
+                    // If same date, sort by period
+                    const periodOrder: { [key: string]: number } = { MANHA: 1, TARDE: 2, NOITE: 3 }
+                    return (periodOrder[a.periodo] || 4) - (periodOrder[b.periodo] || 4)
+                  })
+                  .slice(0, 6)
+                  .map((aula) => (
+                    <UpcomingClassCard key={aula.id} aula={aula} />
+                  ))}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -239,67 +155,104 @@ export default function Dashboard() {
   )
 }
 
-interface StatsCardProps {
-  title: string
-  value: string
-  description: string
-  icon: React.ReactNode
-  color: "blue" | "green" | "purple" | "orange"
-  trend: string
+interface UpcomingClassCardProps {
+  aula: any
 }
 
-function StatsCard({ title, value, description, icon, color, trend }: StatsCardProps) {
-  const colorClasses = {
-    blue: "from-blue-500 to-blue-600",
-    green: "from-green-500 to-green-600",
-    purple: "from-purple-500 to-purple-600",
-    orange: "from-orange-500 to-orange-600",
+function UpcomingClassCard({ aula }: UpcomingClassCardProps) {
+  const formatDate = (dateString: string) => {
+    if (!dateString) return "N/A"
+    const date = new Date(dateString + "T00:00:00")
+    const today = new Date()
+    const tomorrow = new Date(today)
+    tomorrow.setDate(tomorrow.getDate() + 1)
+
+    today.setHours(0, 0, 0, 0)
+    tomorrow.setHours(0, 0, 0, 0)
+    date.setHours(0, 0, 0, 0)
+
+    if (date.getTime() === today.getTime()) {
+      return "Hoje"
+    } else if (date.getTime() === tomorrow.getTime()) {
+      return "Amanhã"
+    } else {
+      return date.toLocaleDateString("pt-BR", {
+        weekday: "short",
+        day: "2-digit",
+        month: "2-digit",
+      })
+    }
+  }
+ const getPeriodTime = (periodo: string) => {
+    switch (periodo) {
+      case "AB":
+        return "08:00 - 12:00"
+      case "CD":
+        return "14:00 - 18:00"
+      case "JK":
+        return "17:30 - 19:00"
+      case "LM":
+        return "19:15 - 20:25"
+      case "NP":
+        return "21:00 - 22:30"
+      default:
+        return "Horário não definido"
+    }
   }
 
-  const bgClasses = {
-    blue: "from-blue-50 to-blue-100",
-    green: "from-green-50 to-green-100",
-    purple: "from-purple-50 to-purple-100",
-    orange: "from-orange-50 to-orange-100",
+  const getPeriodColor = (periodo: string) => {
+    switch (periodo) {
+      case "MANHA":
+        return "bg-yellow-100 text-yellow-800 border-yellow-200"
+      case "TARDE":
+        return "bg-orange-100 text-orange-800 border-orange-200"
+      case "NOITE":
+        return "bg-purple-100 text-purple-800 border-purple-200"
+      default:
+        return "bg-gray-100 text-gray-800 border-gray-200"
+    }
   }
 
   return (
-    <Card
-      className={`sarc-card backdrop-blur-sm bg-gradient-to-br ${bgClasses[color]} border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105`}
-    >
-      <CardContent className="p-6">
-        <div className="flex items-center justify-between mb-4">
-          <div className={`p-3 rounded-xl bg-gradient-to-r ${colorClasses[color]} text-white shadow-lg`}>{icon}</div>
-          <div className="text-right">
-            <p className="text-3xl font-bold text-gray-800">{value}</p>
-            <p className="text-xs text-gray-600 font-medium">{trend}</p>
+    <Card className="sarc-card hover:shadow-lg transition-all duration-300 hover:scale-105 border-l-4 border-l-blue-500">
+      <CardContent className="p-4">
+        <div className="flex items-start justify-between mb-3">
+          <div className="flex-1">
+            <h3 className="font-bold text-gray-900 text-lg mb-1">{aula.turma?.numero || "Turma N/A"}</h3>
+            <p className="text-sm text-gray-600">{aula.turma?.disciplina?.nome || "Disciplina não informada"}</p>
+          </div>
+          <Badge variant="outline" className={`${getPeriodColor(aula.periodo)} font-medium`}>
+            {aula.periodo || "N/A"}
+          </Badge>
+        </div>
+
+        <div className="space-y-2">
+          <div className="flex items-center text-sm text-gray-600">
+            <Calendar className="w-4 h-4 mr-2 text-blue-500" />
+            <span className="font-medium">{formatDate(aula.data)}</span>
+          </div>
+
+          <div className="flex items-center text-sm text-gray-600">
+            <Clock className="w-4 h-4 mr-2 text-green-500" />
+            <span>{getPeriodTime(aula.periodo)}</span>
+          </div>
+
+          <div className="flex items-center text-sm text-gray-600">
+            <span>{aula.sala?.nome || "Sala não definida"}</span>
           </div>
         </div>
-        <div>
-          <p className="font-semibold text-gray-800 mb-1">{title}</p>
-          <p className="text-sm text-gray-600">{description}</p>
+
+        <div className="mt-4 pt-3 border-t border-gray-100">
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-gray-500">{aula.sala?.predio?.nome || "Prédio não informado"}</span>
+            <Button size="sm" variant="outline" asChild>
+              <Link href={`/aulas/${aula.id}`}>Detalhes</Link>
+            </Button>
+          </div>
         </div>
       </CardContent>
     </Card>
   )
-}
-
-// Componente de Esqueleto para as estatísticas (copiado da última versão)
-function StatsCardSkeleton() {
-  return (
-    <Card>
-      <CardContent className="p-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="h-4 bg-gray-200 rounded w-24 mb-2"></div>
-            <div className="h-8 bg-gray-200 rounded w-16 mb-1"></div>
-            <div className="h-3 bg-gray-200 rounded w-32"></div>
-          </div>
-          <Loader2 className="w-8 h-8 text-gray-300 animate-spin" />
-        </div>
-      </CardContent>
-    </Card>
-  );
 }
 
 interface QuickActionCardProps {

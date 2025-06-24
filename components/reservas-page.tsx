@@ -22,8 +22,9 @@ const ReservasPage = () => {
   const [showModal, setShowModal] = useState(false)
   const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
-    id_aula: "",
-    id_recurso: "",
+    // ALTERADO: Nomes dos campos para corresponder ao ReservaDTO do backend
+    aulaId: "",
+    recursoId: "",
   })
 
   useEffect(() => {
@@ -55,10 +56,11 @@ const ReservasPage = () => {
     e.preventDefault()
     setError(null)
     try {
-      // ALTERADO: Formato dos dados para enviar ao backend
+      // ALTERADO: Formato dos dados para enviar ao backend.
+      // O ReservaController agora espera um ReservaDTO com aulaId e recursoId no nível superior.
       const reservaData = {
-        aula: { id: Number.parseInt(formData.id_aula) }, // Envia objeto aninhado com o ID da aula
-        recurso: { id: Number.parseInt(formData.id_recurso) }, // Envia objeto aninhado com o ID do recurso
+        aulaId: Number.parseInt(formData.aulaId),
+        recursoId: Number.parseInt(formData.recursoId),
       }
 
       await api.post("/api/reservas", reservaData)
@@ -87,8 +89,8 @@ const ReservasPage = () => {
 
   const resetForm = () => {
     setFormData({
-      id_aula: "",
-      id_recurso: "",
+      aulaId: "", // Renomeado
+      recursoId: "", // Renomeado
     })
   }
 
@@ -141,7 +143,7 @@ const ReservasPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6"> {/* Adicionado min-h-screen e bg-gray-50 p-6 para espaçamento e fundo */}
+    <div className="min-h-screen bg-gray-50 p-6">
       <Navbar /> {/* ADICIONADO: Renderiza a Navbar aqui */}
       <div className="container mx-auto p-4">
         <div className="flex justify-between items-center mb-6">
@@ -236,8 +238,8 @@ const ReservasPage = () => {
             <div>
               <Label htmlFor="id_aula">Aula</Label>
               <Select
-                value={formData.id_aula}
-                onValueChange={(value) => setFormData({ ...formData, id_aula: value })}
+                value={formData.aulaId}
+                onValueChange={(value) => setFormData({ ...formData, aulaId: value })}
                 required
               >
                 <SelectTrigger id="id_aula">
@@ -256,8 +258,8 @@ const ReservasPage = () => {
             <div>
               <Label htmlFor="id_recurso">Recurso</Label>
               <Select
-                value={formData.id_recurso}
-                onValueChange={(value) => setFormData({ ...formData, id_recurso: value })}
+                value={formData.recursoId}
+                onValueChange={(value) => setFormData({ ...formData, recursoId: value })}
                 required
               >
                 <SelectTrigger id="id_recurso">
