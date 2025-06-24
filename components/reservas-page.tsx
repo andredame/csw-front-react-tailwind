@@ -27,6 +27,10 @@ const ReservasPage = () => {
     aulaId: "",
     recursoId: "",
   })
+  const reservaData = {
+  aulaId: Number.parseInt(formData.aulaId),
+  recursoId: Number.parseInt(formData.recursoId),
+}
 
   // Periodos de aula (copiados do dashboard ou AulasPage para consistência)
   const periodosInfo: { [key: string]: { label: string; color: string } } = {

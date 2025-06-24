@@ -22,7 +22,7 @@ import Navbar from "./navbar" // Importa o componente Navbar
 const AulasPage = () => {
   const [aulas, setAulas] = useState<any[]>([])
   const [turmas, setTurmas] = useState<any[]>([])
-  const [salas, setSalas] = useState<any[]>([])
+  const [salas, setSalas] = useState<any[]>([]) // Estado para armazenar as salas
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
   const [editingAula, setEditingAula] = useState<any | null>(null)
@@ -36,7 +36,6 @@ const AulasPage = () => {
   })
 
   const { user } = useAuth()
-  // Adiciona a verificação de role para controle de acesso (se necessário na página de aulas)
   const isProfessor = user?.roles?.includes("PROFESSOR")
   const isAdminOrCoordenador = user?.roles?.includes("ADMIN") || user?.roles?.includes("COORDENADOR")
 
@@ -50,7 +49,7 @@ const AulasPage = () => {
 
   useEffect(() => {
     loadData()
-  }, [user]) // Adiciona 'user' como dependência para recarregar se o usuário mudar
+  }, [user])
 
   const loadData = async () => {
     try {
@@ -58,25 +57,23 @@ const AulasPage = () => {
       setError(null)
 
       let aulasResponse;
-      // Busca aulas baseadas na role do usuário
       if (user?.id && isProfessor) {
-        // Se for professor, busca apenas as aulas dele
-        aulasResponse = await api.get(`/api/aulas/professor/${user.id}`); // Supondo que você tenha esta rota no backend
+        aulasResponse = await api.get(`/api/aulas/professor/${user.id}`);
       } else if (isAdminOrCoordenador) {
-        // Se for admin ou coordenador, busca todas as aulas
         aulasResponse = await api.get("/api/aulas");
       } else {
-        // Para outros usuários (ex: ALUNO), talvez você queira uma rota específica ou todas as aulas públicas
-        // Por enquanto, busca todas para exemplo. Ajuste conforme sua regra de negócio.
         aulasResponse = await api.get("/api/aulas");
       }
 
-      const [turmasResponse] = await Promise.all([
-        api.get("/api/turmas"), // Busca turmas
+      const [turmasResponse, salasResponse] = await Promise.all([
+        api.get("/api/turmas"),
+        api.get("/api/salas"), // Chamada para a API real de salas
       ]);
 
       setAulas(aulasResponse.data)
       setTurmas(turmasResponse.data)
+      setSalas(salasResponse.data) // As salas devem ser populadas aqui
+      console.log("Salas carregadas:", salasResponse.data); // ADICIONE ESTA LINHA PARA DEPURAR
     } catch (err: any) {
       console.error("Erro ao carregar dados:", err)
       setError(err.response?.data?.message || "Falha ao carregar aulas. Tente novamente.")
@@ -84,19 +81,6 @@ const AulasPage = () => {
       setLoading(false)
     }
   }
-
-  // A função loadSalas foi integrada no loadData e ajustada para a API real
-  // Caso precise carregar salas separadamente (ex: em um modal), pode manter uma versão simplificada:
-  // const loadSalasSeparately = async () => {
-  //   try {
-  //     const response = await api.get("/api/salas");
-  //     setSalas(response.data);
-  //   } catch (err: any) {
-  //     console.error("Erro ao carregar salas:", err);
-  //     setError("Falha ao carregar salas disponíveis.");
-  //   }
-  // };
-
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -114,7 +98,6 @@ const AulasPage = () => {
         turmaId: Number.parseInt(formData.turmaId),
         salaId: Number.parseInt(formData.salaId),
         periodo: formData.periodo,
-        // professorId: user.id, // O professor que cria a aula é o logado. Se sua API espera isso no corpo.
       }
 
       if (editingAula) {
@@ -195,7 +178,7 @@ const AulasPage = () => {
       <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-amber-50 to-orange-50">
         <div className="text-center">
           <Loader2 className="h-12 w-12 animate-spin text-amber-600 mx-auto mb-4" />
-          <p className="text-lg text-gray-700">Carregando aulas...</p>
+          <p className="ml-2 text-lg text-gray-700">Carregando aulas...</p>
         </div>
       </div>
     )
@@ -203,7 +186,7 @@ const AulasPage = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-amber-50 via-white to-orange-50">
-      <Navbar /> {/* Adicionando Navbar */}
+      <Navbar />
       <div className="container mx-auto px-4 py-8">
         <div className="flex justify-between items-center mb-8">
           <div>
@@ -212,7 +195,7 @@ const AulasPage = () => {
             </h1>
             <p className="text-gray-600 text-lg">Gerencie suas aulas e horários</p>
           </div>
-          {(isProfessor || isAdminOrCoordenador) && ( // Apenas professor, admin ou coordenador podem criar aula
+          {(isProfessor || isAdminOrCoordenador) && (
             <Button onClick={openCreateModal} className="bg-amber-600 hover:bg-amber-700 text-white shadow-lg">
               <BookOpen className="mr-2 h-5 w-5" />
               Nova Aula
@@ -238,7 +221,7 @@ const AulasPage = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {(isProfessor || isAdminOrCoordenador) && ( // Apenas professor, admin ou coordenador podem criar aula
+              {(isProfessor || isAdminOrCoordenador) && (
                 <Button onClick={openCreateModal} className="bg-amber-600 hover:bg-amber-700 text-white shadow-lg">
                   <BookOpen className="mr-2 h-5 w-5" />
                   Criar Primeira Aula
@@ -359,7 +342,7 @@ const AulasPage = () => {
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione um período" />
                   </SelectTrigger>
-                  <SelectContent className="z-[100000]"> {/* Adicione esta classe */}
+                  <SelectContent className="z-[100000]">
                     {periodos.map((periodo) => (
                       <SelectItem key={periodo.value} value={periodo.value}>
                         {periodo.label}
@@ -378,11 +361,10 @@ const AulasPage = () => {
                   onValueChange={(value) => setFormData({ ...formData, turmaId: value })}
                   required
                 >
-                  <SelectTrigger>
+                  <SelectTrigger id="turmaId">
                     <SelectValue placeholder="Selecione uma turma" />
                   </SelectTrigger>
-                                  <SelectContent className="z-[100000]"> {/* Adicione esta classe */}
-
+                  <SelectContent className="z-[100000]">
                     {turmas.map((turma) => (
                       <SelectItem key={turma.id} value={turma.id.toString()}>
                         {turma.numero} - {turma.disciplina?.nome || "Sem disciplina"}
@@ -404,8 +386,7 @@ const AulasPage = () => {
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione uma sala" />
                   </SelectTrigger>
-                                  <SelectContent className="z-[100000]"> {/* Adicione esta classe */}
-
+                  <SelectContent className="z-[100000]">
                     {salas.map((sala) => (
                       <SelectItem key={sala.id} value={sala.id.toString()}>
                         {sala.nome} - {sala.predio?.nome || "Prédio não informado"}
