@@ -256,7 +256,8 @@ export default function ClassManagement() {
                     <SelectTrigger>
                       <SelectValue placeholder="Filter by semester" />
                     </SelectTrigger>
-                    <SelectContent>
+                                    <SelectContent className="z-[100000]"> {/* Adicione esta classe */}
+
                       <SelectItem value="all">All Semesters</SelectItem>
                       <SelectItem value="2024.1">2024.1</SelectItem>
                       <SelectItem value="2024.2">2024.2</SelectItem>
@@ -456,7 +457,8 @@ export default function ClassManagement() {
                                       <SelectTrigger>
                                         <SelectValue placeholder="Choose a student" />
                                       </SelectTrigger>
-                                      <SelectContent>
+                                                      <SelectContent className="z-[100000]"> {/* Adicione esta classe */}
+
                                         {availableStudents.map((student) => (
                                           <SelectItem key={student.id} value={student.id}>
                                             {student.username} ({student.email})

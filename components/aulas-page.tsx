@@ -1,11 +1,9 @@
-// aulas-page.tsx
+// AulasPage.tsx
 "use client"
 
 import type React from "react"
 
 import { useState, useEffect } from "react"
-import api from "../src/services/api" // Adjust path to your API service
-import Modal from "../src/components/Modal" // Adjust path to your Modal component
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -14,10 +12,12 @@ import { Textarea } from "@/components/ui/textarea"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Loader2, BookOpen } from "lucide-react"
+import { Loader2, BookOpen, Clock } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { useAuth } from "@/providers/auth-provider" // Import useAuth to get user info
-import Navbar from "./navbar"
+import ImprovedModal from "@/components/improved-modal"
+import api from "../src/services/api" // IMPORTAÇÃO REAL
+import { useAuth } from "@/providers/auth-provider" // IMPORTAÇÃO REAL
+import Navbar from "./navbar" // Importa o componente Navbar
 
 const AulasPage = () => {
   const [aulas, setAulas] = useState<any[]>([])
@@ -32,38 +32,48 @@ const AulasPage = () => {
     descricao: "",
     turmaId: "",
     salaId: "",
-    // REMOVIDO: disciplinaId não é mais necessário aqui
     periodo: "JK",
   })
 
-  const { user } = useAuth() // Get user from auth context
+  const { user } = useAuth()
+  // Adiciona a verificação de role para controle de acesso (se necessário na página de aulas)
+  const isProfessor = user?.roles?.includes("PROFESSOR")
+  const isAdminOrCoordenador = user?.roles?.includes("ADMIN") || user?.roles?.includes("COORDENADOR")
 
   const periodos = [
-    { value: "AB", label: "AB (Manhã)" },
-    { value: "CD", label: "CD (Manhã)" },
-    { value: "JK", label: "JK (Tarde)" },
-    { value: "LM", label: "LM (Tarde)" },
-    { value: "NP", label: "NP (Noite)" },
+    { value: "AB", label: "AB (Manhã)", color: "bg-blue-100 text-blue-800" },
+    { value: "CD", label: "CD (Manhã)", color: "bg-blue-100 text-blue-800" },
+    { value: "JK", label: "JK (Tarde)", color: "bg-orange-100 text-orange-800" },
+    { value: "LM", label: "LM (Tarde)", color: "bg-orange-100 text-orange-800" },
+    { value: "NP", label: "NP (Noite)", color: "bg-purple-100 text-purple-800" },
   ]
 
   useEffect(() => {
     loadData()
-  }, [])
+  }, [user]) // Adiciona 'user' como dependência para recarregar se o usuário mudar
 
   const loadData = async () => {
     try {
       setLoading(true)
-      setError(null) // Limpa erros anteriores
-      let aulasResponse
-      // Se o usuário logado for um PROFESSOR e tiver um ID, busca apenas as aulas dele
-      if (user?.id && user?.roles?.includes("PROFESSOR")) {
-        aulasResponse = await api.get(`/api/aulas/professor/${user.id}`) // Busca aulas específicas do professor
+      setError(null)
+
+      let aulasResponse;
+      // Busca aulas baseadas na role do usuário
+      if (user?.id && isProfessor) {
+        // Se for professor, busca apenas as aulas dele
+        aulasResponse = await api.get(`/api/aulas/professor/${user.id}`); // Supondo que você tenha esta rota no backend
+      } else if (isAdminOrCoordenador) {
+        // Se for admin ou coordenador, busca todas as aulas
+        aulasResponse = await api.get("/api/aulas");
       } else {
-        // Para ADMIN, COORDENADOR ou ALUNO, busca todas as aulas (ou aulas relevantes, dependendo da lógica do backend para /api/aulas geral)
-        aulasResponse = await api.get("/api/aulas")
+        // Para outros usuários (ex: ALUNO), talvez você queira uma rota específica ou todas as aulas públicas
+        // Por enquanto, busca todas para exemplo. Ajuste conforme sua regra de negócio.
+        aulasResponse = await api.get("/api/aulas");
       }
 
-      const turmasResponse = await api.get("/api/turmas") // Busca todas as turmas para o dropdown
+      const [turmasResponse] = await Promise.all([
+        api.get("/api/turmas"), // Busca turmas
+      ]);
 
       setAulas(aulasResponse.data)
       setTurmas(turmasResponse.data)
@@ -75,32 +85,22 @@ const AulasPage = () => {
     }
   }
 
-  const loadSalas = async () => {
-    try {
-      setError(null) // Clear previous errors
-      const response = await api.get("/api/predios")
-      const predios = response.data
+  // A função loadSalas foi integrada no loadData e ajustada para a API real
+  // Caso precise carregar salas separadamente (ex: em um modal), pode manter uma versão simplificada:
+  // const loadSalasSeparately = async () => {
+  //   try {
+  //     const response = await api.get("/api/salas");
+  //     setSalas(response.data);
+  //   } catch (err: any) {
+  //     console.error("Erro ao carregar salas:", err);
+  //     setError("Falha ao carregar salas disponíveis.");
+  //   }
+  // };
 
-      const todasSalas: any[] = []
-      for (const predio of predios) {
-        try {
-          const salasResponse = await api.get(`/api/predios/${predio.id}/salas`)
-          todasSalas.push(...salasResponse.data.map((sala: any) => ({ ...sala, predioNome: predio.nome })))
-        } catch (err: any) {
-          console.warn(`Erro ao carregar salas do prédio ${predio.id}:`, err.response?.data?.message || err.message)
-          // Não lança erro aqui, apenas loga para falhas de prédio individual
-        }
-      }
-      setSalas(todasSalas)
-    } catch (err: any) {
-      console.error("Erro ao carregar salas:", err)
-      setError(err.response?.data?.message || "Falha ao carregar salas disponíveis.")
-    }
-  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setError(null) // Limpa erros anteriores
+    setError(null)
 
     try {
       if (!user?.id) {
@@ -108,26 +108,25 @@ const AulasPage = () => {
         return
       }
 
-      // Backend espera AulaRequestDTO com turmaId, salaId, data, periodo, descricao.
-      // disciplinaId é inferido da turma no backend.
       const aulaData = {
-        data: formData.data, // YYYY-MM-DD string do input type="date"
+        data: formData.data,
         descricao: formData.descricao,
         turmaId: Number.parseInt(formData.turmaId),
         salaId: Number.parseInt(formData.salaId),
         periodo: formData.periodo,
+        // professorId: user.id, // O professor que cria a aula é o logado. Se sua API espera isso no corpo.
       }
 
       if (editingAula) {
         await api.put(`/api/aulas/${editingAula.id}`, aulaData)
       } else {
-        await api.post("/api/aulas", aulaData) // Controller lida com a passagem de professorId do contexto
+        await api.post("/api/aulas", aulaData)
       }
 
       setShowModal(false)
       setEditingAula(null)
       resetForm()
-      loadData() // Recarrega dados após operação bem-sucedida
+      loadData()
     } catch (err: any) {
       console.error("Erro ao salvar aula:", err)
       setError(err.response?.data?.message || "Erro ao salvar aula. Verifique os dados e tente novamente.")
@@ -137,21 +136,19 @@ const AulasPage = () => {
   const handleEdit = (aula: any) => {
     setEditingAula(aula)
     setFormData({
-      data: aula.data, // LocalDate vem como string YYYY-MM-DD
+      data: aula.data,
       descricao: aula.descricao || "",
       turmaId: aula.turma?.id?.toString() || "",
       salaId: aula.sala?.id?.toString() || "",
-      // REMOVIDO: disciplinaId não é mais necessário aqui
       periodo: aula.periodo || "JK",
     })
-    loadSalas() // Carrega salas ao abrir modal de edição
     setShowModal(true)
   }
 
   const handleDelete = async (id: number) => {
     if (window.confirm("Tem certeza que deseja excluir esta aula?")) {
       try {
-        setError(null) // Limpa erros anteriores
+        setError(null)
         await api.delete(`/api/aulas/${id}`)
         loadData()
       } catch (err: any) {
@@ -167,16 +164,14 @@ const AulasPage = () => {
       descricao: "",
       turmaId: "",
       salaId: "",
-      // REMOVIDO: disciplinaId não é mais necessário aqui
       periodo: "JK",
     })
-    setError(null) // Limpa erro ao resetar formulário
+    setError(null)
   }
 
   const openCreateModal = () => {
     setEditingAula(null)
     resetForm()
-    loadSalas() // Carrega salas ao abrir modal de criação
     setShowModal(true)
   }
 
@@ -186,228 +181,265 @@ const AulasPage = () => {
     return `${day}/${month}/${year}`
   }
 
+  const getPeriodoBadge = (periodo: string) => {
+    const periodoInfo = periodos.find((p) => p.value === periodo)
+    return (
+      <Badge variant="secondary" className={periodoInfo?.color || "bg-gray-100 text-gray-800"}>
+        {periodoInfo?.label || periodo}
+      </Badge>
+    )
+  }
+
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="h-10 w-10 animate-spin text-blue-600" />
-        <p className="ml-2 text-lg text-gray-700">Carregando aulas...</p>
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-amber-50 to-orange-50">
+        <div className="text-center">
+          <Loader2 className="h-12 w-12 animate-spin text-amber-600 mx-auto mb-4" />
+          <p className="text-lg text-gray-700">Carregando aulas...</p>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-red-50 wave-container relative">
-      {/* Background Wave Patterns */}
-      <div className="wave-background">
-        <div className="wave-pattern wave-pattern-1"></div>
-        <div className="wave-pattern wave-pattern-2"></div>
-        <div className="wave-pattern wave-pattern-3"></div>
-      </div>
-
-      <Navbar />
-
-      <div className="container mx-auto px-4 py-8 relative z-10">
-        <div className="flex justify-between items-center mb-6">
+    <div className="min-h-screen bg-gradient-to-br from-amber-50 via-white to-orange-50">
+      <Navbar /> {/* Adicionando Navbar */}
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex justify-between items-center mb-8">
           <div>
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 via-red-600 to-yellow-600 bg-clip-text text-transparent mb-2">
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent mb-2">
               Minhas Aulas
             </h1>
-            <p className="text-gray-600">Gerencie suas aulas e horários</p>
+            <p className="text-gray-600 text-lg">Gerencie suas aulas e horários</p>
           </div>
-          <Button onClick={openCreateModal} className="sarc-button-primary">
-            Nova Aula
-          </Button>
+          {(isProfessor || isAdminOrCoordenador) && ( // Apenas professor, admin ou coordenador podem criar aula
+            <Button onClick={openCreateModal} className="bg-amber-600 hover:bg-amber-700 text-white shadow-lg">
+              <BookOpen className="mr-2 h-5 w-5" />
+              Nova Aula
+            </Button>
+          )}
         </div>
 
         {error && (
-          <Alert variant="destructive" className="mb-4">
-            <AlertDescription>{error}</AlertDescription>
+          <Alert variant="destructive" className="mb-6 border-red-200 bg-red-50">
+            <AlertDescription className="text-red-800">{error}</AlertDescription>
           </Alert>
         )}
 
         {aulas.length === 0 ? (
-          <Card className="text-center p-8">
+          <Card className="text-center p-12 shadow-lg border-0 bg-white/80 backdrop-blur-sm">
             <CardHeader>
-              <BookOpen className="w-16 h-16 mx-auto text-gray-400 mb-4" />
-              <CardTitle>Nenhuma aula encontrada</CardTitle>
-              <CardDescription>Clique em "Nova Aula" para agendar sua primeira aula.</CardDescription>
+              <div className="w-20 h-20 bg-gradient-to-br from-amber-500 to-orange-500 rounded-full flex items-center justify-center mx-auto mb-6">
+                <BookOpen className="w-10 h-10 text-white" />
+              </div>
+              <CardTitle className="text-2xl font-bold text-gray-800 mb-2">Nenhuma aula encontrada</CardTitle>
+              <CardDescription className="text-gray-600 text-lg">
+                Clique em "Nova Aula" para agendar sua primeira aula.
+              </CardDescription>
             </CardHeader>
             <CardContent>
-              <Button onClick={openCreateModal}>Criar Primeira Aula</Button>
+              {(isProfessor || isAdminOrCoordenador) && ( // Apenas professor, admin ou coordenador podem criar aula
+                <Button onClick={openCreateModal} className="bg-amber-600 hover:bg-amber-700 text-white shadow-lg">
+                  <BookOpen className="mr-2 h-5 w-5" />
+                  Criar Primeira Aula
+                </Button>
+              )}
             </CardContent>
           </Card>
         ) : (
-          <Card>
+          <Card className="shadow-lg border-0 bg-white/90 backdrop-blur-sm">
             <CardContent className="p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Data</TableHead>
-                    <TableHead>Turma</TableHead>
-                    <TableHead>Sala</TableHead>
-                    <TableHead>Período</TableHead>
-                    <TableHead>Descrição</TableHead>
-                    <TableHead className="text-right">Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {aulas.map((aula) => (
-                    <TableRow key={aula.id}>
-                      <TableCell>{formatDate(aula.data)}</TableCell>
-                      <TableCell>
-                        {aula.turma ? (
-                          <>
-                            <div className="font-medium">{aula.turma.numero}</div>
-                            {aula.turma.disciplina && (
-                              <div className="text-xs text-muted-foreground">{aula.turma.disciplina.nome}</div>
-                            )}
-                          </>
-                        ) : (
-                          <span className="text-muted-foreground">N/A</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {aula.sala ? (
-                          <>
-                            <div className="font-medium">{aula.sala.nome}</div>
-                            {aula.sala.predio && (
-                              <div className="text-xs text-muted-foreground">{aula.sala.predio.nome}</div>
-                            )}
-                          </>
-                        ) : (
-                          <span className="text-muted-foreground">N/A</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="secondary" className="bg-blue-100 text-blue-800">
-                          {periodos.find((p) => p.value === aula.periodo)?.label || aula.periodo}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>{aula.descricao || "-"}</TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end space-x-2">
-                          <Button variant="secondary" size="sm" onClick={() => handleEdit(aula)}>
-                            Editar
-                          </Button>
-                          <Button variant="destructive" size="sm" onClick={() => handleDelete(aula.id)}>
-                            Excluir
-                          </Button>
-                        </div>
-                      </TableCell>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-gray-50/80">
+                      <TableHead className="font-semibold text-gray-700">Data</TableHead>
+                      <TableHead className="font-semibold text-gray-700">Turma</TableHead>
+                      <TableHead className="font-semibold text-gray-700">Sala</TableHead>
+                      <TableHead className="font-semibold text-gray-700">Período</TableHead>
+                      <TableHead className="font-semibold text-gray-700">Descrição</TableHead>
+                      {(isProfessor || isAdminOrCoordenador) && <TableHead className="text-right font-semibold text-gray-700">Ações</TableHead>}
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {aulas.map((aula, index) => (
+                      <TableRow key={aula.id} className={index % 2 === 0 ? "bg-white" : "bg-gray-50/30"}>
+                        <TableCell className="font-medium text-gray-900">
+                          <div className="flex items-center space-x-2">
+                            <Clock className="h-4 w-4 text-gray-400" />
+                            <span>{formatDate(aula.data)}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {aula.turma ? (
+                            <div>
+                              <div className="font-medium text-gray-900">{aula.turma.numero}</div>
+                              {aula.turma.disciplina && (
+                                <div className="text-sm text-gray-500">{aula.turma.disciplina.nome}</div>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-gray-500">N/A</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {aula.sala ? (
+                            <div>
+                              <div className="font-medium text-gray-900">{aula.sala.nome}</div>
+                              {aula.sala.predio && <div className="text-sm text-gray-500">{aula.sala.predio.nome}</div>}
+                            </div>
+                          ) : (
+                            <span className="text-gray-500">N/A</span>
+                          )}
+                        </TableCell>
+                        <TableCell>{getPeriodoBadge(aula.periodo)}</TableCell>
+                        <TableCell className="text-gray-700 max-w-xs truncate">{aula.descricao || "-"}</TableCell>
+                        {(isProfessor || isAdminOrCoordenador) && (
+                          <TableCell className="text-right">
+                            <div className="flex items-center justify-end space-x-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleEdit(aula)}
+                                className="hover:bg-amber-50 hover:text-amber-600 hover:border-amber-300"
+                              >
+                                Editar
+                              </Button>
+                              <Button
+                                variant="destructive"
+                                size="sm"
+                                onClick={() => handleDelete(aula.id)}
+                                className="hover:bg-red-600"
+                              >
+                                Excluir
+                              </Button>
+                            </div>
+                          </TableCell>
+                        )}
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
             </CardContent>
           </Card>
         )}
 
-        <Modal isOpen={showModal} onClose={() => setShowModal(false)} title={editingAula ? "Editar Aula" : "Nova Aula"}>
-          <form onSubmit={handleSubmit} className="p-4 space-y-4">
-            <div>
-              <Label htmlFor="data">Data</Label>
-              <Input
-                id="data"
-                name="data"
-                type="date"
-                value={formData.data}
-                onChange={(e) => setFormData({ ...formData, data: e.target.value })}
-                required
-              />
+        <ImprovedModal
+          isOpen={showModal}
+          onClose={() => setShowModal(false)}
+          title={editingAula ? "Editar Aula" : "Nova Aula"}
+          size="lg"
+        >
+          <form onSubmit={handleSubmit} className="p-6 space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label htmlFor="data" className="text-sm font-medium text-gray-700">
+                  Data *
+                </Label>
+                <Input
+                  id="data"
+                  name="data"
+                  type="date"
+                  value={formData.data}
+                  onChange={(e) => setFormData({ ...formData, data: e.target.value })}
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="periodo" className="text-sm font-medium text-gray-700">
+                  Período *
+                </Label>
+                <Select
+                  value={formData.periodo}
+                  onValueChange={(value) => setFormData({ ...formData, periodo: value })}
+                  required
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione um período" />
+                  </SelectTrigger>
+                  <SelectContent className="z-[100000]"> {/* Adicione esta classe */}
+                    {periodos.map((periodo) => (
+                      <SelectItem key={periodo.value} value={periodo.value}>
+                        {periodo.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="turmaId" className="text-sm font-medium text-gray-700">
+                  Turma *
+                </Label>
+                <Select
+                  value={formData.turmaId}
+                  onValueChange={(value) => setFormData({ ...formData, turmaId: value })}
+                  required
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione uma turma" />
+                  </SelectTrigger>
+                                  <SelectContent className="z-[100000]"> {/* Adicione esta classe */}
+
+                    {turmas.map((turma) => (
+                      <SelectItem key={turma.id} value={turma.id.toString()}>
+                        {turma.numero} - {turma.disciplina?.nome || "Sem disciplina"}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="salaId" className="text-sm font-medium text-gray-700">
+                  Sala *
+                </Label>
+                <Select
+                  value={formData.salaId}
+                  onValueChange={(value) => setFormData({ ...formData, salaId: value })}
+                  required
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione uma sala" />
+                  </SelectTrigger>
+                                  <SelectContent className="z-[100000]"> {/* Adicione esta classe */}
+
+                    {salas.map((sala) => (
+                      <SelectItem key={sala.id} value={sala.id.toString()}>
+                        {sala.nome} - {sala.predio?.nome || "Prédio não informado"}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
-            <div>
-              <Label htmlFor="turmaId">Turma</Label>
-              <Select
-                value={formData.turmaId}
-                onValueChange={(value) => setFormData({ ...formData, turmaId: value })}
-                required
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione uma turma" />
-                </SelectTrigger>
-                <SelectContent>
-                  {turmas.map((turma) => (
-                    <SelectItem key={turma.id} value={turma.id.toString()}>
-                      {turma.numero} - {turma.disciplina?.nome || "Sem disciplina"}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <Label htmlFor="salaId">Sala</Label>
-              <Select
-                value={formData.salaId}
-                onValueChange={(value) => setFormData({ ...formData, salaId: value })}
-                required
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione uma sala" />
-                </SelectTrigger>
-                <SelectContent>
-                  {salas.map((sala) => (
-                    <SelectItem key={sala.id} value={sala.id.toString()}>
-                      {sala.nome} - {sala.predio?.nome || sala.predioNome || "Prédio não informado"}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* REMOVIDO: Campo de Disciplina ID */}
-            {/* <div>
-              <Label htmlFor="disciplinaId">Disciplina ID (Opcional)</Label>
-              <Input
-                id="disciplinaId"
-                name="disciplinaId"
-                type="number"
-                value={formData.disciplinaId}
-                onChange={(e) => setFormData({ ...formData, disciplinaId: e.target.value })}
-                placeholder="Ex: 123"
-              />
-            </div> */}
-
-            <div>
-              <Label htmlFor="periodo">Período</Label>
-              <Select
-                value={formData.periodo}
-                onValueChange={(value) => setFormData({ ...formData, periodo: value })}
-                required
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione um período" />
-                </SelectTrigger>
-                <SelectContent>
-                  {periodos.map((periodo) => (
-                    <SelectItem key={periodo.value} value={periodo.value}>
-                      {periodo.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <Label htmlFor="descricao">Descrição (Opcional)</Label>
+            <div className="space-y-2">
+              <Label htmlFor="descricao" className="text-sm font-medium text-gray-700">
+                Descrição (Opcional)
+              </Label>
               <Textarea
                 id="descricao"
                 name="descricao"
                 value={formData.descricao}
                 onChange={(e) => setFormData({ ...formData, descricao: e.target.value })}
                 rows={3}
+                placeholder="Descreva o conteúdo da aula..."
               />
             </div>
 
-            <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
-              <Button type="button" variant="outline" onClick={() => setShowModal(false)}>
+            <div className="flex justify-end space-x-3 pt-6 border-t border-gray-200">
+              <Button type="button" variant="outline" onClick={() => setShowModal(false)} className="px-6">
                 Cancelar
               </Button>
-              <Button type="submit">{editingAula ? "Atualizar" : "Criar"}</Button>
+              <Button type="submit" className="bg-amber-600 hover:bg-amber-700 text-white px-6">
+                {editingAula ? "Atualizar" : "Criar"}
+              </Button>
             </div>
           </form>
-        </Modal>
+        </ImprovedModal>
       </div>
     </div>
   )
