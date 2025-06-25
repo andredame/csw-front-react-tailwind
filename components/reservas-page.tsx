@@ -256,7 +256,7 @@ const loadData = async () => {
                         <TableCell>
                               {reserva.aula ? (
                                 <div>
-                                  <div className="font-medium text-gray-900">{reserva.aula.turma?.numero || "N/A"}</div>
+                                  <div className="font-medium text-gray-900">{reserva.aula.turma?.numero || "N/A"} - {reserva.aula.turma?.disciplina?.nome}</div>
                                   <div className="text-sm text-gray-500">
                                     {reserva.aula.sala?.nome || "Sala não informada"}
                                   </div>
