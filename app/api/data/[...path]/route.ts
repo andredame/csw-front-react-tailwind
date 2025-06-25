@@ -79,8 +79,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(data);
 }
 
-// Adicione PUT e DELETE de forma similar, ajustando o método e o corpo da requisição.
-// Exemplo para PUT:
 export async function PUT(request: NextRequest) {
     const cookieStore = await cookies();
     const token = cookieStore.get("token")?.value;
@@ -91,27 +89,45 @@ export async function PUT(request: NextRequest) {
 
     const urlPath = request.nextUrl.pathname.replace("/api/data", "");
     const backendUrl = `${SPRING_BOOT_BASE_URL}${urlPath}${request.nextUrl.search}`;
-    const requestBody = await request.json();
+
+    let requestBody = null; // Declare requestBody como nulo por padrão
+    // CORREÇÃO: Tente ler o body apenas se o Content-Type for application/json
+    try {
+      if (request.headers.get("content-type")?.includes("application/json")) {
+        requestBody = await request.json();
+      }
+    } catch (e) {
+      console.warn("PUT: No valid JSON body or empty body detected. Continuing without body.", e);
+      requestBody = null; // Garante que seja nulo se houver erro ao parsear
+    }
 
     console.log("Proxying PUT request to backend:", backendUrl);
 
-    const backendResponse = await fetch(backendUrl, {
-        method: "PUT",
-        headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${token}`,
-        },
-        body: JSON.stringify(requestBody),
-    });
+    const fetchOptions: RequestInit = {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json", // Mantenha isso se o backend espera Content-Type JSON
+        "Authorization": `Bearer ${token}`,
+      },
+      // CORREÇÃO: Só inclua o body se requestBody não for nulo
+      ...(requestBody !== null && { body: JSON.stringify(requestBody) }),
+    };
+
+    const backendResponse = await fetch(backendUrl, fetchOptions);
 
     if (!backendResponse.ok) {
-        const errorText = await backendResponse.text();
-        console.error(`Backend returned non-OK status (${backendResponse.status}):`, errorText);
-        return NextResponse.json({ message: `Backend error: ${errorText}` }, { status: backendResponse.status });
+      const errorText = await backendResponse.text();
+      console.error(`Backend returned non-OK status (${backendResponse.status}):`, errorText);
+      return NextResponse.json({ message: `Backend error: ${errorText}` }, { status: backendResponse.status });
     }
 
-    const data = await backendResponse.json();
-    return NextResponse.json(data);
+    // Tenta parsear a resposta como JSON (com fallback para vazio se não for JSON)
+    try {
+      const data = await backendResponse.json();
+      return NextResponse.json(data);
+    } catch {
+      return new NextResponse(null, { status: backendResponse.status });
+    }
 }
 
 // Exemplo para DELETE:

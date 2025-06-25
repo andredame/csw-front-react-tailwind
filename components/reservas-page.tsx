@@ -79,7 +79,6 @@ const loadData = async () => {
   }
 }
 
-// TODO: FIX DELETE RESERVA 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

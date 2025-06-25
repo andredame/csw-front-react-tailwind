@@ -157,7 +157,7 @@ const TurmasPage = () => {
       }
       console.log("Linking aluno:", linkAlunoFormData.alunoId, "to turma:", selectedTurmaId);
 
-      const response = await api.post(
+      const response = await api.put(
         `/api/turmas/${selectedTurmaId}/alunos/${linkAlunoFormData.alunoId}`
       );
       
