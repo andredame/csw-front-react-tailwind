@@ -245,9 +245,7 @@ function UpcomingClassCard({ aula }: UpcomingClassCardProps) {
         <div className="mt-4 pt-3 border-t border-gray-100">
           <div className="flex items-center justify-between">
             <span className="text-xs text-gray-500">{aula.sala?.predio?.nome || "Prédio não informado"}</span>
-            <Button size="sm" variant="outline" asChild>
-              <Link href={`/aulas/${aula.id}`}>Detalhes</Link>
-            </Button>
+           
           </div>
         </div>
       </CardContent>
