@@ -67,18 +67,8 @@ const loadData = async () => {
 
     console.log("reservasResponse.data:", reservasResponse.data)
 
-    const reservasCompletas = reservasResponse.data.map((reserva: any) => {
-      const aula = aulasResponse.data.find((a: any) => a.id === reserva.aulaId)
-      const recurso = recursosResponse.data.find((r: any) => r.id === reserva.recursoId)
 
-      return {
-        ...reserva,
-        aula,
-        recurso,
-      }
-    })
-
-    setReservas(reservasCompletas)
+    setReservas(reservasResponse.data)
     setAulas(aulasResponse.data)
     setRecursos(recursosResponse.data)
   } catch (err: any) {
