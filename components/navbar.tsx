@@ -55,11 +55,6 @@ export default function Navbar() {
               Dashboard
             </NavLink>
 
-            {hasAnyRole(["ADMIN", "COORDENADOR"]) && (
-              <NavLink href="/predios" isActive={isActive("/predios")} icon={<Building className="w-4 h-4" />}>
-                Prédios
-              </NavLink>
-            )}
 
             {hasAnyRole(["PROFESSOR", "COORDENADOR"]) && (
               <NavLink href="/turmas" isActive={isActive("/turmas")} icon={<Users className="w-4 h-4" />}>

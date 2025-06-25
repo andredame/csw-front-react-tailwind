@@ -369,28 +369,8 @@ const TurmasPage = () => {
                                 >
                                   Excluir
                                 </Button>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={(e) => {
-                                    e.stopPropagation()
-                                    openLinkAlunoModal(turma.id)
-                                  }}
-                                  className="hover:bg-green-50 hover:text-green-600 hover:border-green-300"
-                                >
-                                  + Aluno
-                                </Button>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={(e) => {
-                                    e.stopPropagation()
-                                    openLinkProfessorModal(turma.id)
-                                  }}
-                                  className="hover:bg-purple-50 hover:text-purple-600 hover:border-purple-300"
-                                >
-                                  + Professor
-                                </Button>
+
+                                
                               </div>
                             </TableCell>
                           )}
