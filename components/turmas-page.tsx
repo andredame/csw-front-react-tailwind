@@ -82,8 +82,11 @@ const TurmasPage = () => {
       setTurmas(turmasResponse.data)
       setDisciplinas(disciplinasResponse.data)
       const allUsers = usersResponse.data
-      setProfessors(allUsers.filter((u: any) => u.roles && u.roles.includes("PROFESSOR")))
-      setAlunos(allUsers.filter((u: any) => u.roles && u.roles.includes("ALUNO")))
+      console.log("All users loaded:", allUsers)
+      setProfessors(allUsers.filter((u: any) => 
+        u.roles && u.roles.some((role: any) => role.name === "PROFESSOR")
+      ))
+      setAlunos(allUsers.filter((u: any) => u.roles && u.roles.some((role: any) => role.name === "ALUNO")))
     } catch (err: any) {
       console.error("Erro ao carregar dados:", err)
       setError(err.response?.data?.message || "Falha ao carregar turmas. Tente novamente.")
@@ -144,24 +147,37 @@ const TurmasPage = () => {
       }
     }
   }
-
   const handleLinkAluno = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError(null)
+    e.preventDefault();
+    setError(null);
     try {
       if (!selectedTurmaId || !linkAlunoFormData.alunoId) {
-        setError("Turma ou Aluno não selecionados.")
-        return
+        setError("Turma ou Aluno não selecionados.");
+        return;
       }
-      await api.post(`/api/turmas/${selectedTurmaId}/alunos/${linkAlunoFormData.alunoId}`)
-      setShowLinkAlunoModal(false)
-      setLinkAlunoFormData({ alunoId: "" })
-      loadData()
+      console.log("Linking aluno:", linkAlunoFormData.alunoId, "to turma:", selectedTurmaId);
+
+      const response = await api.post(
+        `/api/turmas/${selectedTurmaId}/alunos/${linkAlunoFormData.alunoId}`
+      );
+      
+      
+      setShowLinkAlunoModal(false);
+      setLinkAlunoFormData({ alunoId: "" });
+      loadData(); // Recarrega os dados para atualizar a interface
     } catch (err: any) {
-      console.error("Erro ao vincular aluno:", err)
-      setError(err.response?.data?.message || "Erro ao vincular aluno. Tente novamente mais tarde.")
+      console.error("Erro detalhado ao vincular aluno:", {
+        error: err,
+        response: err.response?.data
+      });
+      
+      setError(
+        err.response?.data?.message || 
+        "Erro ao vincular aluno. Verifique o console para detalhes."
+      );
     }
-  }
+  };
+// TODO FIX VINCULAR ALUNO A TURMA 
 
   const handleLinkProfessor = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -171,6 +187,7 @@ const TurmasPage = () => {
         setError("Turma ou Professor não selecionados.")
         return
       }
+      console.log("Linking professor:", linkProfessorFormData.professorId, "to turma:", selectedTurmaId)
       // CORREÇÃO: Mudar de api.put para api.post e ajustar a URL para 'professores' no plural
       await api.post(`/api/turmas/${selectedTurmaId}/professores/${linkProfessorFormData.professorId}`) // Ajuste aqui
       setShowLinkProfessorModal(false)
@@ -280,13 +297,13 @@ const TurmasPage = () => {
                       <TableHead className="font-semibold text-gray-700">Horário</TableHead>
                       <TableHead className="font-semibold text-gray-700">Vagas</TableHead>
                       <TableHead className="font-semibold text-gray-700">Alunos</TableHead>
-                      {shouldShowProfessorColumn && <TableHead className="font-semibold text-gray-700">Professor</TableHead>} {/* Condição aqui */}
+                      {shouldShowProfessorColumn && <TableHead className="font-semibold text-gray-700">Professor</TableHead>}
                       {isCoordenador && <TableHead className="text-right font-semibold text-gray-700">Ações</TableHead>}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {turmas.map((turma, index) => (
-                      <TableRow key={turma.id} className={index % 2 === 0 ? "bg-white" : "bg-gray-50/30"}>
+                    {turmas.map((turma) => (
+                      <TableRow key={turma.id} className={turmas.indexOf(turma) % 2 === 0 ? "bg-white" : "bg-gray-50/30"}>
                         <TableCell className="font-medium text-gray-900">{turma.numero}</TableCell>
                         <TableCell className="text-gray-700">
                           <div>
@@ -299,7 +316,9 @@ const TurmasPage = () => {
                             {turma.semestre}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-gray-700">{turma.horario}</TableCell>
+                        <TableCell className="text-gray-700">
+                          {turma.horario}
+                        </TableCell>
                         <TableCell>
                           <Badge variant="secondary" className="bg-green-100 text-green-800">
                             {turma.vagas} vagas
@@ -310,7 +329,11 @@ const TurmasPage = () => {
                             {turma.alunos ? turma.alunos.length : 0} alunos
                           </Badge>
                         </TableCell>
-                        {shouldShowProfessorColumn && <TableCell className="text-gray-700">{turma.professor?.username || "N/A"}</TableCell>} {/* Condição aqui */}
+                        {shouldShowProfessorColumn && (
+                          <TableCell className="text-gray-700">
+                            {turma.professor?.username || "N/A"}
+                          </TableCell>
+                        )}
                         {isCoordenador && (
                           <TableCell className="text-right">
                             <div className="flex justify-end space-x-1">

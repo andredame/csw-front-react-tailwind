@@ -30,12 +30,15 @@ const RecursosPage = () => {
     tipoRecursoId: "",
     status: "",
   })
-
   useEffect(() => {
-    loadRecursos()
-    loadTiposRecurso()
+    const loadData = async () => {
+      await Promise.all([
+        loadRecursos(),
+        loadTiposRecurso()
+      ])
+    }
+    loadData()
   }, [])
-
   const loadRecursos = async () => {
     try {
       setLoading(true)
@@ -52,7 +55,7 @@ const RecursosPage = () => {
 
   const loadTiposRecurso = async () => {
     try {
-      const response = await api.get("/api/tipo-recursos") // Rota real para tipos de recurso
+      const response = await api.get("/api/recursos/tipo") // Rota real para tipos de recurso
       setTiposRecurso(response.data)
     } catch (err: any) {
       console.error("Erro ao carregar tipos de recurso:", err)
@@ -93,14 +96,22 @@ const RecursosPage = () => {
       </Badge>
     )
   }
+  const resetForm = () => {
+    setFormData({
+      tipoRecursoId: "",
+      status: "",
+    })
+    setError(null)
+  }
 
-  const handleSubmit = async (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
+
     try {
       const recursoData = {
-        tipoRecursoId: Number.parseInt(formData.tipoRecursoId),
-        status: formData.status,
+        tipoRecursoId: Number(formData.tipoRecursoId),
+        status: formData.status
       }
 
       if (editingRecurso) {
@@ -112,18 +123,18 @@ const RecursosPage = () => {
       setShowModal(false)
       setEditingRecurso(null)
       resetForm()
-      loadRecursos()
+      await loadRecursos() // Recarrega a lista após a edição
+      
     } catch (err: any) {
       console.error("Erro ao salvar recurso:", err)
-      setError(err.response?.data?.message || "Erro ao salvar recurso. Verifique os dados e tente novamente.")
+      setError(err.response?.data?.message || "Erro ao salvar recurso")
     }
-  }
 
   const handleEdit = (recurso: any) => {
     setEditingRecurso(recurso)
     setFormData({
       tipoRecursoId: recurso.tipoRecurso?.id?.toString() || "",
-      status: recurso.status || "",
+      status: recurso.status || "DISPONIVEL" // Valor padrão
     })
     setShowModal(true)
   }
@@ -139,14 +150,6 @@ const RecursosPage = () => {
         setError(err.response?.data?.message || "Erro ao excluir recurso. Tente novamente mais tarde.")
       }
     }
-  }
-
-  const resetForm = () => {
-    setFormData({
-      tipoRecursoId: "",
-      status: "",
-    })
-    setError(null)
   }
 
   const openCreateModal = () => {
@@ -234,12 +237,12 @@ const RecursosPage = () => {
                         <TableCell>{getStatusBadge(recurso.status)}</TableCell>
                         {isAdmin && (
                           <TableCell className="text-right">
-                            <div className="flex justify-end space-x-2">
+                            <div className="flex justify-end gap-2">
                               <Button
                                 variant="outline"
                                 size="sm"
                                 onClick={() => handleEdit(recurso)}
-                                className="hover:bg-blue-50 hover:text-blue-600 hover:border-blue-300"
+                                className="text-blue-600 border-blue-200 hover:bg-blue-50"
                               >
                                 Editar
                               </Button>
@@ -247,7 +250,6 @@ const RecursosPage = () => {
                                 variant="destructive"
                                 size="sm"
                                 onClick={() => handleDelete(recurso.id)}
-                                className="hover:bg-red-600"
                               >
                                 Excluir
                               </Button>
@@ -264,70 +266,88 @@ const RecursosPage = () => {
         )}
 
         {isAdmin && (
-          <ImprovedModal
-            isOpen={showModal}
-            onClose={() => setShowModal(false)}
-            title={editingRecurso ? "Editar Recurso" : "Novo Recurso"}
-            size="md"
-          >
-            <form onSubmit={handleSubmit} className="p-6 space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="tipoRecursoId" className="text-sm font-medium text-gray-700">
-                  Tipo de Recurso *
-                </Label>
-                <Select
-                  value={formData.tipoRecursoId}
-                  onValueChange={(value) => setFormData({ ...formData, tipoRecursoId: value })}
-                  required
-                >
-                  <SelectTrigger id="tipoRecursoId" className="w-full">
-                    <SelectValue placeholder="Selecione o tipo de recurso" />
-                  </SelectTrigger>
-                                  <SelectContent className="z-[100000]"> {/* Adicione esta classe */}
+            <ImprovedModal
+              isOpen={showModal}
+              onClose={() => {
+                setShowModal(false)
+                setEditingRecurso(null)
+                resetForm()
+              }}
+              title={editingRecurso ? `Editar Recurso #${editingRecurso.id}` : "Novo Recurso"}
+              size="md"
+            >
+              <form onSubmit={handleSubmit} className="p-6 space-y-6">
+                <div className="space-y-2">
+                  <Label htmlFor="tipoRecursoId" className="text-sm font-medium text-gray-700">
+                    Tipo de Recurso *
+                  </Label>
+                  <Select
+                    value={formData.tipoRecursoId}
+                    onValueChange={(value) => setFormData({ ...formData, tipoRecursoId: value })}
+                    required
+                  >
+                    <SelectTrigger id="tipoRecursoId" className="w-full">
+                      <SelectValue placeholder="Selecione o tipo de recurso" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {tiposRecurso.map((tipo) => (
+                        <SelectItem key={tipo.id} value={tipo.id.toString()}>
+                          {tipo.nome}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
 
-                    {tiposRecurso.map((tipo) => (
-                      <SelectItem key={tipo.id} value={tipo.id.toString()}>
-                        {tipo.nome}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+                <div className="space-y-2">
+                  <Label htmlFor="status" className="text-sm font-medium text-gray-700">
+                    Status *
+                  </Label>
+                  <Select
+                    value={formData.status}
+                    onValueChange={(value) => setFormData({ ...formData, status: value })}
+                    required
+                  >
+                    <SelectTrigger id="status" className="w-full">
+                      <SelectValue placeholder="Selecione o status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="DISPONIVEL">Disponível</SelectItem>
+                      <SelectItem value="EM_MANUTENCAO">Em Manutenção</SelectItem>
+                      <SelectItem value="INDISPONIVEL">Indisponível</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="status" className="text-sm font-medium text-gray-700">
-                  Status *
-                </Label>
-                <Select
-                  value={formData.status}
-                  onValueChange={(value) => setFormData({ ...formData, status: value })}
-                  required
-                >
-                  <SelectTrigger id="status" className="w-full">
-                    <SelectValue placeholder="Selecione o status" />
-                  </SelectTrigger>
-                                  <SelectContent className="z-[100000]"> {/* Adicione esta classe */}
+                {error && (
+                  <Alert variant="destructive">
+                    <AlertDescription>{error}</AlertDescription>
+                  </Alert>
+                )}
 
-                    <SelectItem value="DISPONIVEL">Disponível</SelectItem>
-                    <SelectItem value="EM_MANUTENCAO">Em Manutenção</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+                <div className="flex justify-end space-x-3 pt-6 border-t border-gray-200">
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    onClick={() => {
+                      setShowModal(false)
+                      setEditingRecurso(null)
+                      resetForm()
+                    }}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
+                    {editingRecurso ? "Atualizar" : "Criar"}
+                  </Button>
+                </div>
+              </form>
+            </ImprovedModal>
 
-              <div className="flex justify-end space-x-3 pt-6 border-t border-gray-200">
-                <Button type="button" variant="outline" onClick={() => setShowModal(false)} className="px-6">
-                  Cancelar
-                </Button>
-                <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-6">
-                  {editingRecurso ? "Atualizar" : "Criar"}
-                </Button>
-              </div>
-            </form>
-          </ImprovedModal>
         )}
       </div>
     </div>
   )
-}
+}}
 
-export default RecursosPage
+export default RecursosPage;

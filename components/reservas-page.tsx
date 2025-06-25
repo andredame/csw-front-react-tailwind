@@ -11,6 +11,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Loader2, Calendar, Clock } from "lucide-react"
+import { useAuth } from "@/providers/auth-provider" // 👈 Adicione isso no topo
+
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import ImprovedModal from "@/components/improved-modal"
 import api from "../src/services/api" // IMPORTAÇÃO REAL
@@ -27,11 +29,7 @@ const ReservasPage = () => {
     aulaId: "",
     recursoId: "",
   })
-  const reservaData = {
-  aulaId: Number.parseInt(formData.aulaId),
-  recursoId: Number.parseInt(formData.recursoId),
-}
-
+  // REMOVIDO: const reservaData = { ... } aqui, pois é redundante
   // Periodos de aula (copiados do dashboard ou AulasPage para consistência)
   const periodosInfo: { [key: string]: { label: string; color: string } } = {
     AB: { label: "AB (Manhã)", color: "bg-blue-100 text-blue-800" },
@@ -41,30 +39,57 @@ const ReservasPage = () => {
     NP: { label: "NP (Noite)", color: "bg-purple-100 text-purple-800" },
   }
 
-  useEffect(() => {
+const { user } = useAuth()
+const isProfessor = user?.roles?.includes("PROFESSOR")
+
+useEffect(() => {
+  if (user) {
     loadData()
-  }, [])
-
-  const loadData = async () => {
-    try {
-      setLoading(true)
-      setError(null)
-      const [reservasResponse, aulasResponse, recursosResponse] = await Promise.all([
-        api.get("/api/reservas"),
-        api.get("/api/aulas"),    // API real de aulas
-        api.get("/api/recursos"), // API real de recursos
-      ])
-
-      setReservas(reservasResponse.data)
-      setAulas(aulasResponse.data)
-      setRecursos(recursosResponse.data)
-    } catch (err: any) {
-      console.error("Erro ao carregar dados:", err)
-      setError(err.response?.data?.message || "Falha ao carregar reservas e dados relacionados.")
-    } finally {
-      setLoading(false)
-    }
   }
+}, [user])
+
+const loadData = async () => {
+  try {
+    setLoading(true)
+    setError(null)
+
+    let reservasResponse
+    if (user?.id && isProfessor) {
+      reservasResponse = await api.get(`/api/reservas/professor/${user.id}`) // 👈 Rota específica
+    } else {
+      reservasResponse = await api.get("/api/reservas") // 👈 Rota geral
+    }
+
+    const [aulasResponse, recursosResponse] = await Promise.all([
+      api.get("/api/aulas"),
+      api.get("/api/recursos"),
+    ])
+
+    console.log("reservasResponse.data:", reservasResponse.data)
+
+    const reservasCompletas = reservasResponse.data.map((reserva: any) => {
+      const aula = aulasResponse.data.find((a: any) => a.id === reserva.aulaId)
+      const recurso = recursosResponse.data.find((r: any) => r.id === reserva.recursoId)
+
+      return {
+        ...reserva,
+        aula,
+        recurso,
+      }
+    })
+
+    setReservas(reservasCompletas)
+    setAulas(aulasResponse.data)
+    setRecursos(recursosResponse.data)
+  } catch (err: any) {
+    console.error("Erro ao carregar dados:", err)
+    setError(err.response?.data?.message || "Falha ao carregar reservas.")
+  } finally {
+    setLoading(false)
+  }
+}
+
+// TODO: FIX DELETE RESERVA 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -74,7 +99,8 @@ const ReservasPage = () => {
         aulaId: Number.parseInt(formData.aulaId),
         recursoId: Number.parseInt(formData.recursoId),
       }
-
+      console.log("Dados do formulário:", formData); // Adicione esta linha
+      console.log("Dados da reserva a enviar:", reservaData); // Adicione esta linha
       await api.post("/api/reservas", reservaData)
 
       setShowModal(false)
@@ -82,7 +108,8 @@ const ReservasPage = () => {
       loadData()
     } catch (err: any) {
       console.error("Erro ao criar reserva:", err)
-      setError(err.response?.data?.message || "Erro ao criar reserva. Verifique se o recurso está disponível para este horário.")
+      // Ajuste a mensagem de erro para ser mais amigável com as exceções do backend
+      setError(err.response?.data?.message || "Erro ao criar reserva. Verifique a disponibilidade ou dados.")
     }
   }
 
@@ -90,6 +117,7 @@ const ReservasPage = () => {
     if (window.confirm("Tem certeza que deseja cancelar esta reserva?")) {
       setError(null)
       try {
+        console.log("Cancelando reserva com ID:", id) // Adicione esta linha para depuração
         await api.delete(`/api/reservas/${id}`)
         loadData()
       } catch (err: any) {
@@ -113,8 +141,10 @@ const ReservasPage = () => {
 
   const formatDate = (dateString: string) => {
     if (!dateString) return "N/A"
-    const date = new Date(dateString + "T00:00:00")
-    return date.toLocaleDateString("pt-BR")
+    // Assumindo que o dateString vem no formato "YYYY-MM-DD" do backend (LocalDate.toString())
+    // e queremos exibir como "DD/MM/YYYY"
+    const [year, month, day] = dateString.split("-")
+    return `${day}/${month}/${year}`
   }
 
   const getStatusBadge = (status: string) => {
@@ -214,6 +244,7 @@ const ReservasPage = () => {
             </CardContent>
           </Card>
         ) : (
+
           <Card className="shadow-lg border-0 bg-white/90 backdrop-blur-sm">
             <CardContent className="p-0">
               <div className="overflow-x-auto">
@@ -229,37 +260,39 @@ const ReservasPage = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {reservas.map((reserva, index) => (
+                  {reservas.map((reserva, index) => {
+                    console.log("Renderizando reserva:", reserva) // 🔍 Verifique o que tem em cada reserva
+                    return (
                       <TableRow key={reserva.id} className={index % 2 === 0 ? "bg-white" : "bg-gray-50/30"}>
                         <TableCell>
-                          {reserva.aula ? (
-                            <div>
-                              <div className="font-medium text-gray-900">{reserva.aula.turma?.numero || "N/A"}</div>
-                              <div className="text-sm text-gray-500">
-                                {reserva.aula.sala?.nome || "Sala não informada"}
+                              {reserva.aula ? (
+                                <div>
+                                  <div className="font-medium text-gray-900">{reserva.aula.turma?.numero || "N/A"}</div>
+                                  <div className="text-sm text-gray-500">
+                                    {reserva.aula.sala?.nome || "Sala não informada"}
+                                  </div>
+                                </div>
+                              ) : (
+                                <span className="text-gray-500">N/A</span>
+                              )}
+                            </TableCell>
+                          <TableCell className="text-gray-700">
+                            {reserva.aula ? formatDate(reserva.aula.data) : "N/A"}
+                          </TableCell>
+                          <TableCell>{reserva.aula?.periodo && getPeriodoBadge(reserva.aula.periodo)}</TableCell>
+                          <TableCell>
+                            {reserva.recurso ? ( // Verifica se o objeto recurso está presente
+                              <div>
+                                <div className="font-medium text-gray-900">
+                                  {reserva.recurso.tipoRecurso?.nome || "Recurso"}
+                                </div>
+                                <div className="text-sm text-gray-500">ID: {reserva.recurso.id}</div>
                               </div>
-                            </div>
-                          ) : (
-                            <span className="text-gray-500">N/A</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-gray-700">
-                          {reserva.aula ? formatDate(reserva.aula.data) : "N/A"}
-                        </TableCell>
-                        <TableCell>{reserva.aula?.periodo && getPeriodoBadge(reserva.aula.periodo)}</TableCell>
-                        <TableCell>
-                          {reserva.recurso ? (
-                            <div>
-                              <div className="font-medium text-gray-900">
-                                {reserva.recurso.tipoRecurso?.nome || "Recurso"}
-                              </div>
-                              <div className="text-sm text-gray-500">ID: {reserva.recurso.id}</div>
-                            </div>
-                          ) : (
-                            <span className="text-gray-500">N/A</span>
-                          )}
-                        </TableCell>
-                        <TableCell>{reserva.recurso?.status && getStatusBadge(reserva.recurso.status)}</TableCell>
+                            ) : (
+                              <span className="text-gray-500">N/A</span>
+                            )}
+                          </TableCell>
+                          <TableCell>{reserva.recurso?.status && getStatusBadge(reserva.recurso.status)}</TableCell>
                         <TableCell className="text-right">
                           <Button
                             variant="destructive"
@@ -271,7 +304,8 @@ const ReservasPage = () => {
                           </Button>
                         </TableCell>
                       </TableRow>
-                    ))}
+                    )
+                  })}
                   </TableBody>
                 </Table>
               </div>
@@ -293,8 +327,7 @@ const ReservasPage = () => {
                 <SelectTrigger id="aulaId">
                   <SelectValue placeholder="Selecione uma aula" />
                 </SelectTrigger>
-                                <SelectContent className="z-[100000]"> {/* Adicione esta classe */}
-
+                <SelectContent className="z-[100000]">
                   {aulas.map((aula) => (
                     <SelectItem key={aula.id} value={aula.id.toString()}>
                       <div className="flex items-center space-x-2">
@@ -322,8 +355,7 @@ const ReservasPage = () => {
                 <SelectTrigger id="recursoId">
                   <SelectValue placeholder="Selecione um recurso" />
                 </SelectTrigger>
-                                <SelectContent className="z-[100000]"> {/* Adicione esta classe */}
-
+                <SelectContent className="z-[100000]">
                   {recursos
                     .filter((recurso) => recurso.status === "DISPONIVEL") // Filtra apenas recursos disponíveis
                     .map((recurso) => (
@@ -355,4 +387,4 @@ const ReservasPage = () => {
   )
 }
 
-export default ReservasPage
+export default ReservasPage;
