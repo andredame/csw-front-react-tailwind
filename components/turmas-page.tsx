@@ -1,7 +1,6 @@
-// TurmasPage.tsx
 "use client"
 
-import type React from "react"
+import React from "react"
 
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
@@ -11,12 +10,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Loader2, Users, Plus } from "lucide-react"
+import { Loader2, Users, Plus, ChevronDown, ChevronUp } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import ImprovedModal from "@/components/improved-modal"
-import api from "../src/services/api" // IMPORTAÇÃO REAL
-import { useAuth } from "@/providers/auth-provider" // IMPORTAÇÃO REAL
-import Navbar from "./navbar" // Importado no contexto anterior
+import api from "../src/services/api"
+import { useAuth } from "@/providers/auth-provider"
+import Navbar from "./navbar"
 
 const TurmasPage = () => {
   const [turmas, setTurmas] = useState<any[]>([])
@@ -30,6 +29,7 @@ const TurmasPage = () => {
   const [editingTurma, setEditingTurma] = useState<any | null>(null)
   const [selectedTurmaId, setSelectedTurmaId] = useState<number | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [expandedTurmaId, setExpandedTurmaId] = useState<number | null>(null)
 
   const [formData, setFormData] = useState({
     numero: "",
@@ -52,11 +52,11 @@ const TurmasPage = () => {
   const isCoordenador = user?.roles?.includes("COORDENADOR")
   const isAdmin = user?.roles?.includes("ADMIN")
   const isProfessor = user?.roles?.includes("PROFESSOR")
+  const shouldShowProfessorColumn = isCoordenador || isAdmin || !isProfessor
 
-  // Condição para exibir a coluna "Professor"
-  // Aparece para COORDENADOR e ADMIN, e para quem NÃO É Professor (cobrindo Aluno, etc.)
-  const shouldShowProfessorColumn = isCoordenador || isAdmin || !isProfessor;
-
+  const toggleTurmaExpansion = (turmaId: number) => {
+    setExpandedTurmaId(expandedTurmaId === turmaId ? null : turmaId)
+  }
 
   useEffect(() => {
     loadData()
@@ -67,11 +67,11 @@ const TurmasPage = () => {
       setLoading(true)
       setError(null)
 
-      let turmasResponse;
+      let turmasResponse
       if (user?.id && isProfessor) {
-        turmasResponse = await api.get(`/api/turmas/professor/${user.id}`);
+        turmasResponse = await api.get(`/api/turmas/professor/${user.id}`)
       } else {
-        turmasResponse = await api.get("/api/turmas");
+        turmasResponse = await api.get("/api/turmas")
       }
 
       const [disciplinasResponse, usersResponse] = await Promise.all([
@@ -82,7 +82,6 @@ const TurmasPage = () => {
       setTurmas(turmasResponse.data)
       setDisciplinas(disciplinasResponse.data)
       const allUsers = usersResponse.data
-      console.log("All users loaded:", allUsers)
       setProfessors(allUsers.filter((u: any) => 
         u.roles && u.roles.some((role: any) => role.name === "PROFESSOR")
       ))
@@ -101,8 +100,8 @@ const TurmasPage = () => {
     try {
       const turmaData = {
         ...formData,
-        disciplinaId: Number.parseInt(formData.disciplinaId), // Garante que é number
-        professorId: formData.professorId, // Já é UUID string do backend
+        disciplinaId: Number.parseInt(formData.disciplinaId),
+        professorId: formData.professorId,
         vagas: Number.parseInt(formData.vagas),
       }
 
@@ -147,37 +146,24 @@ const TurmasPage = () => {
       }
     }
   }
+
   const handleLinkAluno = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
+    e.preventDefault()
+    setError(null)
     try {
       if (!selectedTurmaId || !linkAlunoFormData.alunoId) {
-        setError("Turma ou Aluno não selecionados.");
-        return;
+        setError("Turma ou Aluno não selecionados.")
+        return
       }
-      console.log("Linking aluno:", linkAlunoFormData.alunoId, "to turma:", selectedTurmaId);
-
-      const response = await api.put(
-        `/api/turmas/${selectedTurmaId}/alunos/${linkAlunoFormData.alunoId}`
-      );
-      
-      
-      setShowLinkAlunoModal(false);
-      setLinkAlunoFormData({ alunoId: "" });
-      loadData(); // Recarrega os dados para atualizar a interface
+      await api.put(`/api/turmas/${selectedTurmaId}/alunos/${linkAlunoFormData.alunoId}`)
+      setShowLinkAlunoModal(false)
+      setLinkAlunoFormData({ alunoId: "" })
+      loadData()
     } catch (err: any) {
-      console.error("Erro detalhado ao vincular aluno:", {
-        error: err,
-        response: err.response?.data
-      });
-      
-      setError(
-        err.response?.data?.message || 
-        "Erro ao vincular aluno. Verifique o console para detalhes."
-      );
+      console.error("Erro ao vincular aluno:", err)
+      setError(err.response?.data?.message || "Erro ao vincular aluno. Verifique o console para detalhes.")
     }
-  };
-// TODO FIX VINCULAR ALUNO A TURMA 
+  }
 
   const handleLinkProfessor = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -187,9 +173,7 @@ const TurmasPage = () => {
         setError("Turma ou Professor não selecionados.")
         return
       }
-      console.log("Linking professor:", linkProfessorFormData.professorId, "to turma:", selectedTurmaId)
-      // CORREÇÃO: Mudar de api.put para api.post e ajustar a URL para 'professores' no plural
-      await api.post(`/api/turmas/${selectedTurmaId}/professores/${linkProfessorFormData.professorId}`) // Ajuste aqui
+      await api.post(`/api/turmas/${selectedTurmaId}/professores/${linkProfessorFormData.professorId}`)
       setShowLinkProfessorModal(false)
       setLinkProfessorFormData({ professorId: "" })
       loadData()
@@ -198,6 +182,20 @@ const TurmasPage = () => {
       setError(err.response?.data?.message || "Erro ao vincular professor. Tente novamente mais tarde.")
     }
   }
+
+  const handleRemoveAluno = async (turmaId: number, alunoId: string) => {
+    if (window.confirm("Tem certeza que deseja remover este aluno da turma?")) {
+      try {
+        setError(null)
+        await api.delete(`/api/turmas/${turmaId}/alunos/${alunoId}`)
+        loadData()
+      } catch (err: any) {
+        console.error("Erro ao remover aluno:", err)
+        setError(err.response?.data?.message || "Erro ao remover aluno da turma.")
+      }
+    }
+  }
+
   const resetForm = () => {
     setFormData({
       numero: "",
@@ -291,6 +289,7 @@ const TurmasPage = () => {
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-gray-50/80">
+                      <TableHead className="font-semibold text-gray-700"></TableHead>
                       <TableHead className="font-semibold text-gray-700">Número</TableHead>
                       <TableHead className="font-semibold text-gray-700">Disciplina</TableHead>
                       <TableHead className="font-semibold text-gray-700">Semestre</TableHead>
@@ -303,76 +302,182 @@ const TurmasPage = () => {
                   </TableHeader>
                   <TableBody>
                     {turmas.map((turma) => (
-                      <TableRow key={turma.id} className={turmas.indexOf(turma) % 2 === 0 ? "bg-white" : "bg-gray-50/30"}>
-                        <TableCell className="font-medium text-gray-900">{turma.numero}</TableCell>
-                        <TableCell className="text-gray-700">
-                          <div>
-                            <div className="font-medium">{turma.disciplina?.nome || "N/A"}</div>
-                            <div className="text-xs text-gray-500">{turma.disciplina?.codigo}</div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-                            {turma.semestre}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-gray-700">
-                          {turma.horario}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="secondary" className="bg-green-100 text-green-800">
-                            {turma.vagas} vagas
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">
-                            {turma.alunos ? turma.alunos.length : 0} alunos
-                          </Badge>
-                        </TableCell>
-                        {shouldShowProfessorColumn && (
-                          <TableCell className="text-gray-700">
-                            {turma.professor?.username || "N/A"}
+                      <React.Fragment key={turma.id}>
+                        <TableRow 
+                          onClick={() => toggleTurmaExpansion(turma.id)}
+                          className={`${turmas.indexOf(turma) % 2 === 0 ? "bg-white" : "bg-gray-50/30"} cursor-pointer hover:bg-gray-100`}
+                        >
+                          <TableCell>
+                            {expandedTurmaId === turma.id ? (
+                              <ChevronUp className="h-4 w-4 text-gray-500" />
+                            ) : (
+                              <ChevronDown className="h-4 w-4 text-gray-500" />
+                            )}
                           </TableCell>
-                        )}
-                        {isCoordenador && (
-                          <TableCell className="text-right">
-                            <div className="flex justify-end space-x-1">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleEdit(turma)}
-                                className="hover:bg-blue-50 hover:text-blue-600 hover:border-blue-300"
-                              >
-                                Editar
-                              </Button>
-                              <Button
-                                variant="destructive"
-                                size="sm"
-                                onClick={() => handleDelete(turma.id)}
-                                className="hover:bg-red-600"
-                              >
-                                Excluir
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => openLinkAlunoModal(turma.id)}
-                                className="hover:bg-green-50 hover:text-green-600 hover:border-green-300"
-                              >
-                                + Aluno
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => openLinkProfessorModal(turma.id)}
-                                className="hover:bg-purple-50 hover:text-purple-600 hover:border-purple-300"
-                              >
-                                + Professor
-                              </Button>
+                          <TableCell className="font-medium text-gray-900">{turma.numero}</TableCell>
+                          <TableCell className="text-gray-700">
+                            <div>
+                              <div className="font-medium">{turma.disciplina?.nome || "N/A"}</div>
+                              <div className="text-xs text-gray-500">{turma.disciplina?.codigo}</div>
                             </div>
                           </TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                              {turma.semestre}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-gray-700">
+                            {turma.horario}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="secondary" className="bg-green-100 text-green-800">
+                              {turma.vagas} vagas
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">
+                              {turma.alunos ? turma.alunos.length : 0} alunos
+                            </Badge>
+                          </TableCell>
+                          {shouldShowProfessorColumn && (
+                            <TableCell className="text-gray-700">
+                              {turma.professor?.username || "N/A"}
+                            </TableCell>
+                          )}
+                          {isCoordenador && (
+                            <TableCell className="text-right">
+                              <div className="flex justify-end space-x-1">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    handleEdit(turma)
+                                  }}
+                                  className="hover:bg-blue-50 hover:text-blue-600 hover:border-blue-300"
+                                >
+                                  Editar
+                                </Button>
+                                <Button
+                                  variant="destructive"
+                                  size="sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    handleDelete(turma.id)
+                                  }}
+                                  className="hover:bg-red-600"
+                                >
+                                  Excluir
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    openLinkAlunoModal(turma.id)
+                                  }}
+                                  className="hover:bg-green-50 hover:text-green-600 hover:border-green-300"
+                                >
+                                  + Aluno
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    openLinkProfessorModal(turma.id)
+                                  }}
+                                  className="hover:bg-purple-50 hover:text-purple-600 hover:border-purple-300"
+                                >
+                                  + Professor
+                                </Button>
+                              </div>
+                            </TableCell>
+                          )}
+                        </TableRow>
+                        
+                        {/* Linha expandida */}
+                        {expandedTurmaId === turma.id && (
+                          <TableRow className="bg-gray-50">
+                            <TableCell colSpan={shouldShowProfessorColumn ? 9 : 8} className="p-0">
+                              <div className="p-4 pl-8">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                  <div>
+                                    <h3 className="font-semibold text-lg mb-3">Detalhes da Turma</h3>
+                                    <div className="space-y-2">
+                                      <p><span className="font-medium">Disciplina:</span> {turma.disciplina?.nome || "N/A"}</p>
+                                      <p><span className="font-medium">Código:</span> {turma.disciplina?.codigo || "N/A"}</p>
+                                      <p><span className="font-medium">Semestre:</span> {turma.semestre}</p>
+                                      <p><span className="font-medium">Horário:</span> {turma.horario}</p>
+                                      <p><span className="font-medium">Vagas:</span> {turma.vagas}</p>
+                                      <p><span className="font-medium">Professor:</span> {turma.professor?.username || "N/A"}</p>
+                                    </div>
+                                  </div>
+                                  
+                                  <div>
+                                    <div className="flex justify-between items-center mb-3">
+                                      <h3 className="font-semibold text-lg">Alunos Matriculados</h3>
+                                      {isCoordenador && (
+                                        <Button 
+                                          size="sm" 
+                                          onClick={(e) => {
+                                            e.stopPropagation()
+                                            openLinkAlunoModal(turma.id)
+                                          }}
+                                          className="bg-green-600 hover:bg-green-700 text-white"
+                                        >
+                                          <Plus className="mr-2 h-4 w-4" />
+                                          Adicionar Aluno
+                                        </Button>
+                                      )}
+                                    </div>
+                                    
+                                    {turma.alunos && turma.alunos.length > 0 ? (
+                                      <div className="border rounded-lg overflow-hidden">
+                                        <Table>
+                                          <TableHeader className="bg-gray-100">
+                                            <TableRow>
+                                              <TableHead>Nome</TableHead>
+                                              <TableHead>Email</TableHead>
+                                              {isCoordenador && <TableHead className="text-right">Ações</TableHead>}
+                                            </TableRow>
+                                          </TableHeader>
+                                          <TableBody>
+                                            {turma.alunos.map((aluno: any) => (
+                                              <TableRow key={aluno.id}>
+                                                <TableCell>{aluno.username}</TableCell>
+                                                <TableCell>{aluno.email}</TableCell>
+                                                {isCoordenador && (
+                                                  <TableCell className="text-right">
+                                                    <Button
+                                                      variant="destructive"
+                                                      size="sm"
+                                                      onClick={(e) => {
+                                                        e.stopPropagation()
+                                                        handleRemoveAluno(turma.id, aluno.id)
+                                                      }}
+                                                    >
+                                                      Remover
+                                                    </Button>
+                                                  </TableCell>
+                                                )}
+                                              </TableRow>
+                                            ))}
+                                          </TableBody>
+                                        </Table>
+                                      </div>
+                                    ) : (
+                                      <div className="text-center py-4 text-gray-500">
+                                        Nenhum aluno matriculado nesta turma.
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            </TableCell>
+                          </TableRow>
                         )}
-                      </TableRow>
+                      </React.Fragment>
                     ))}
                   </TableBody>
                 </Table>
@@ -380,7 +485,8 @@ const TurmasPage = () => {
             </CardContent>
           </Card>
         )}
-
+       
+        {/* Modais existentes (criar/editar turma, vincular aluno/professor) */}
         {/* Main CRUD Modal */}
         {(isAdmin || isCoordenador) && (
           <ImprovedModal
@@ -390,6 +496,11 @@ const TurmasPage = () => {
             size="lg"
           >
             <form onSubmit={handleSubmit} className="p-6 space-y-6">
+              {error && ( // Adicionado Alert para erros dentro do modal
+                <Alert variant="destructive" className="mb-4 border-red-200 bg-red-50">
+                  <AlertDescription className="text-red-800">{error}</AlertDescription>
+                </Alert>
+              )}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <Label htmlFor="numero" className="text-sm font-medium text-gray-700">
@@ -431,7 +542,7 @@ const TurmasPage = () => {
                     <SelectTrigger id="disciplinaId">
                       <SelectValue placeholder="Selecione uma disciplina" />
                     </SelectTrigger>
-                    <SelectContent className="z-[100000]"> {/* Adicione esta classe */}
+                    <SelectContent className="z-[100000]">
                       {disciplinas.map((disciplina) => (
                         <SelectItem key={disciplina.id} value={disciplina.id.toString()}>
                           {disciplina.nome} ({disciplina.codigo})
@@ -453,11 +564,10 @@ const TurmasPage = () => {
                     <SelectTrigger id="professorId">
                       <SelectValue placeholder="Selecione um professor" />
                     </SelectTrigger>
-                                    <SelectContent className="z-[100000]"> {/* Adicione esta classe */}
-
+                    <SelectContent className="z-[100000]">
                       {professors.map((professor) => (
                         <SelectItem key={professor.id} value={professor.id}>
-                          {professor.username}
+                          {professor.username} ({professor.email})
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -508,49 +618,62 @@ const TurmasPage = () => {
         )}
 
         {/* Link Student Modal */}
-        {isCoordenador && (
-          <ImprovedModal
-            isOpen={showLinkAlunoModal}
-            onClose={() => setShowLinkAlunoModal(false)}
-            title="Vincular Aluno à Turma"
-            size="md"
-          >
-            <form onSubmit={handleLinkAluno} className="p-6 space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="alunoId" className="text-sm font-medium text-gray-700">
-                  Aluno *
-                </Label>
-                <Select
-                  value={linkAlunoFormData.alunoId}
-                  onValueChange={(value) => setLinkAlunoFormData({ ...linkAlunoFormData, alunoId: value })}
-                  required
-                >
-                  <SelectTrigger id="alunoId">
-                    <SelectValue placeholder="Selecione um aluno" />
-                  </SelectTrigger>
-                                  <SelectContent className="z-[100000]"> {/* Adicione esta classe */}
+       {isCoordenador && (
+        <ImprovedModal
+          isOpen={showLinkAlunoModal}
+          onClose={() => setShowLinkAlunoModal(false)}
+          title="Vincular Aluno à Turma"
+          size="md"
+        >
+          <form onSubmit={handleLinkAluno} className="p-6 space-y-6">
+            <div className="space-y-2">
+              <Label htmlFor="alunoId" className="text-sm font-medium text-gray-700">
+                Aluno *
+              </Label>
+              <Select
+                value={linkAlunoFormData.alunoId}
+                onValueChange={(value) => setLinkAlunoFormData({ ...linkAlunoFormData, alunoId: value })}
+                required
+              >
+                <SelectTrigger id="alunoId">
+                  <SelectValue placeholder="Selecione um aluno" />
+                </SelectTrigger>
+                <SelectContent className="z-[100000]">
+                  {alunos.map((aluno) => (
+                    <SelectItem key={aluno.id} value={aluno.id}>
+                      {aluno.username} ({aluno.email})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-                    {alunos.map((aluno) => (
-                      <SelectItem key={aluno.id} value={aluno.id}>
-                        {aluno.username} ({aluno.email})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+            {error && (
+              <Alert variant="destructive" className="border-red-200 bg-red-50">
+                <AlertDescription className="text-red-800">{error}</AlertDescription>
+              </Alert>
+            )}
 
-              <div className="flex justify-end space-x-3 pt-6 border-t border-gray-200">
-                <Button type="button" variant="outline" onClick={() => setShowLinkAlunoModal(false)} className="px-6">
-                  Cancelar
-                </Button>
-                <Button type="submit" className="bg-green-600 hover:bg-green-700 text-white px-6">
-                  Vincular
-                </Button>
-              </div>
-            </form>
-          </ImprovedModal>
-        )}
-
+            <div className="flex justify-end space-x-3 pt-6 border-t border-gray-200">
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => setShowLinkAlunoModal(false)} 
+                className="px-6"
+              >
+                Cancelar
+              </Button>
+              <Button 
+                type="submit" 
+                className="bg-green-600 hover:bg-green-700 text-white px-6"
+              >
+                Vincular
+              </Button>
+            </div>
+          </form>
+        </ImprovedModal>
+      )}  
+       
         {/* Link Professor Modal */}
         {isCoordenador && (
           <ImprovedModal
@@ -599,9 +722,10 @@ const TurmasPage = () => {
             </form>
           </ImprovedModal>
         )}
+        
       </div>
     </div>
   )
 }
 
-export default TurmasPage
+export default TurmasPage;
