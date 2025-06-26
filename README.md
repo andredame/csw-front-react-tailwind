@@ -73,13 +73,22 @@ TODAS AS SENHAS SÃO: `123456`
 
 
 # FOTOS DA APLICAÇÂO 
-Na aplicação é possivel visualizar as aulas do usuario, seja ela professor ou aluno, e também as aulas que o usuário está inscrito.
+
+![Imagem do Aluno](/assets-readme/login.png)
+
 
 No cargo de ``coordenador`` é possível visualizar todas as turmas, podendo editar e excluir as turmas, além de visualizar os alunos e professores.`
+![Imagem do coordenador](/assets-readme/first-page-coordinator.png)
+![Imagem do coordenador](/assets-readme/turmas%20manager.png)
 
 No cargo de ``admintrador`` é possível visualizar todos os recursos do sistema, podendo editar e excluir os mesmos, além de visualizar os alunos, professores e coordenadores.
+![Imagem do administrador](/assets-readme/edit%20resource%20admin.png)
+![Imagem do coordenador](/assets-readme/resource%20admin.png)
 
-no cargo de ``professor`` é possível visualizar as aulas que o professor leciona, podendo editar e excluir as mesmas, além de visualizar os alunos que estão inscritos na aula.
+No cargo de ``professor`` é possível visualizar as aulas que o professor leciona, podendo editar e excluir as mesmas, além de visualizar os alunos que estão inscritos na aula.
+![Imagem do Aulas professor](/assets-readme/aulas_prof.png) 
+![Imagem do Alunos professor](/assets-readme/page%20prof.png)
+![Imagem ](/assets-readme/edit%20reserva%20prof.png)
 
 
 
