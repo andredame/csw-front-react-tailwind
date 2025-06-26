@@ -80,3 +80,6 @@ No cargo de ``coordenador`` é possível visualizar todas as turmas, podendo edi
 No cargo de ``admintrador`` é possível visualizar todos os recursos do sistema, podendo editar e excluir os mesmos, além de visualizar os alunos, professores e coordenadores.
 
 no cargo de ``professor`` é possível visualizar as aulas que o professor leciona, podendo editar e excluir as mesmas, além de visualizar os alunos que estão inscritos na aula.
+
+
+
